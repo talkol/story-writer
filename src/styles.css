@@ -841,3 +841,234 @@ body {
   font-size: 17px;
   font-weight: 600;
 }
+
+/* ---- Reader -------------------------------------------------------------- */
+
+.reader {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Immersive mode: chrome collapses out of the way, page area keeps its size. */
+.reader--immersive .nav,
+.reader--immersive .pagebar {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.reader .nav,
+.reader .pagebar {
+  transition: opacity 220ms ease;
+}
+
+.stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  padding: 10px 22px 6px;
+  overflow: hidden;
+  /* The reader is a paged surface: no scrolling, no rubber-banding. */
+  touch-action: pan-y;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.stage__inner {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.spread {
+  display: flex;
+  gap: 48px;
+  /* Perspective makes the leaf rotation read as a page lifting off the book. */
+  perspective: 2000px;
+}
+.spread:not(.spread--double) {
+  gap: 0;
+}
+
+.leafbox {
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.page {
+  overflow: hidden;
+  position: relative;
+  background: var(--bg);
+}
+
+.page--blank {
+  background: var(--bg);
+}
+
+/* The flow is the whole chapter; the page shows a slice by translating it. */
+.flow {
+  font-family: var(--font-serif);
+  color: var(--label);
+  letter-spacing: 0;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  will-change: transform;
+}
+
+.flow p {
+  margin: 0 0 var(--para-gap) 0;
+  /* Orphan/widow control is advisory in browsers but costs nothing to ask for. */
+  orphans: 2;
+  widows: 2;
+}
+.flow p:last-child {
+  margin-bottom: 0;
+}
+
+/* ---- Page turn ----------------------------------------------------------- */
+
+/*
+ * The outgoing page is drawn on top of the incoming one and rotates away around the
+ * spine edge. Backface is hidden so the leaf disappears once it passes vertical,
+ * revealing the page already sitting underneath.
+ */
+.leaf {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  background: var(--bg);
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: forwards;
+}
+
+.leaf--forward {
+  transform-origin: left center;
+  animation-name: leaf-forward;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.18);
+}
+
+.leaf--back {
+  transform-origin: right center;
+  animation-name: leaf-back;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.18);
+}
+
+@keyframes leaf-forward {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(-100deg);
+  }
+}
+
+@keyframes leaf-back {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(100deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf--forward,
+  .leaf--back {
+    transform-origin: center;
+    animation-name: leaf-fade;
+    box-shadow: none;
+  }
+  @keyframes leaf-fade {
+    to {
+      opacity: 0;
+    }
+  }
+}
+
+.pagebar {
+  flex: 0 0 auto;
+  padding: 8px var(--gutter);
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: 12px;
+  color: var(--label-3);
+  background: var(--bg);
+}
+
+.reader__empty {
+  align-self: center;
+  max-width: 320px;
+  margin: auto;
+  text-align: center;
+  color: var(--label-2);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.reader__empty-meta {
+  font-size: 13px;
+  color: var(--label-3);
+}
+
+/* Laid out for real so measurements are honest, but never painted or hit-tested. */
+.measurer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+  height: 0;
+  overflow: hidden;
+  contain: size layout;
+}
+
+/* ---- Achievement page ---------------------------------------------------- */
+
+.achievement-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 6px;
+  padding: 0 8%;
+}
+
+.achievement-page__icon {
+  color: var(--tint);
+  margin-bottom: 8px;
+}
+
+.achievement-page__eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--label-2);
+  margin: 0;
+}
+
+.achievement-page__title {
+  font-family: var(--font-serif);
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin: 2px 0 0;
+  color: var(--label);
+}
+
+.achievement-page__desc {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--label-2);
+  margin: 6px 0 0;
+  max-width: 26em;
+}

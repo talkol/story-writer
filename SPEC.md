@@ -369,19 +369,46 @@ story.
 
 ## 7. Pagination engine
 
-- A hidden measuring container mirrors the reader's exact width, font, line-height, and
-  padding.
-- Break the part's prose into word-level tokens; binary-search the largest prefix whose
-  rendered height fits the container. That prefix is a page; repeat from the remainder.
-- Never break inside a word; avoid single-line orphans at a page end.
-- Recompute on: viewport resize, orientation change, font-scale change. Preserve the
-  reader's position by anchoring to a word offset, not a page number — this is why
-  `lastReadPage` is backed by a stored word index.
+The implemented approach is simpler and more reliable than the binary-search-per-page
+sketch this section originally carried.
+
+**Each chapter is laid out once as a single continuous flow, and a page is a vertical
+slice of that flow**, produced by translating it inside a clipping box. What was
+measured is therefore exactly what is rendered — there is no re-flowing of a slice and
+hoping the line breaks fall the same way.
+
+For slicing to be safe the flow must sit on a **line grid**:
+
+- Line height is an integer number of pixels (`round(fontSize × 1.6)`); fractional
+  line heights accumulate rounding error down the page and drift off the grid.
+- Paragraph spacing is exactly one line, so block boundaries stay on the grid.
+- Page height is rounded *down* to a whole number of lines.
+
+With those three in place a slice boundary can never fall through the middle of a line.
+Verified in-browser across all fixture chapters: every line box sits at a single
+sub-line offset and zero lines straddle a page boundary.
+
+- A hidden measurer holds every chapter's flow at the real column width, so page counts
+  for the whole book come from one layout pass rather than one per chapter.
+- Word ↔ page conversion uses `Range.getBoundingClientRect` with a binary search over
+  word anchors — about ten rect reads per lookup, and it reads existing layout instead
+  of forcing a new one.
+- Recompute on viewport resize, orientation change, and font-scale change, via a
+  `ResizeObserver` on the stage (which also catches iPad split-view and the iOS toolbar
+  collapsing) plus an `orientationchange` listener.
+- On every re-measure the visible page is **re-anchored from the stored word offset**,
+  not carried over as a page index — the page index means something different after
+  reflow, and keeping it silently moves the reader. Verified: rotating from phone
+  portrait to iPad landscape re-opens on the same sentence.
 - Cache the computed page breaks per (story, layout signature) so paging is instant on
   re-entry; invalidate when the signature changes.
 - Achievement pages are inserted into the page sequence as fixed, unbreakable units.
-- Landscape iPad: the measuring container is one column of the spread; pages advance
-  two at a time.
+- Landscape iPad: the column width is half the stage minus the gutter, and pages
+  advance two at a time. The spread engages only when the stage is genuinely wide
+  (≥820px and wider than tall), so a phone in landscape stays single-column.
+- Prose is rendered with `*emphasis*` converted to italics. Language models emit
+  markdown emphasis routinely even when asked for plain prose, and raw asterisks
+  mid-page are a visible defect. This is the only markdown construct handled.
 
 ---
 
@@ -439,8 +466,10 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
    modes, audience hint showing chapter count and part length, chapter count locked on
    started stories, mid-story shift warning that sets `genreChangedAtChapter`, and real
    story-record creation wired to Library → Create New.
-4. **Read + pagination** — measured reflow, tap zones, page-turn animation, iPad spread.
-   Built against the fixture.
+4. ~~**Read + pagination**~~ — *done.* Line-grid pagination, tap zones, swipe, arrow
+   keys, page-turn animation, iPad two-page spread, immersive mode, word-anchored
+   resume that survives reflow, achievement pages in the page sequence, and inline
+   emphasis rendering.
 5. **AI generation** — streaming client, delimited parser, prompt assembly, error paths.
 6. **Choice loop** — Actions screen, continuation, ending logic at `totalChapters`.
 7. **Achievements** — modal, achievement pages, pacing guard.

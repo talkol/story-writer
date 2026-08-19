@@ -16,11 +16,12 @@ are [Phosphor](https://phosphoricons.com), self-hosted as a WOFF2. See
 
 See [SPEC.md](SPEC.md) for the full product and technical spec.
 
-> **Status: milestone 3 of 10.** The scaffold, storage layer, Library, Settings, and
-> Genre are done — you can create a real story and it persists. Read, Actions, and
-> Achievements are still stubs, and story *generation* does not exist yet, so a new
-> story has no chapters until milestone 5. Export PDF appears in the "…" menu but is
-> disabled. See [SPEC.md §10](SPEC.md) for the milestone list.
+> **Status: milestone 4 of 10.** Library, Settings, Genre, and the Reader are done —
+> you can create a story, and the fixture stories are fully readable with working
+> pagination, page turns, and the iPad spread. Story *generation* does not exist yet
+> (milestone 5), so a story you create yourself has no chapters. Actions and
+> Achievements are still stubs and Export PDF is disabled. See
+> [SPEC.md §10](SPEC.md) for the milestone list.
 
 ---
 
