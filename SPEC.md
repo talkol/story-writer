@@ -24,8 +24,43 @@ browser; no backend.
 | Achievements | The AI decides when one is earned |
 | Genre editing | Editable mid-story from the Read screen; affects future parts only |
 | PDF export | Full book — cover, prose, achievement pages, achievement index |
+| Visual design | Apple Books layout, iOS system palette and type scale, systemBlue tint |
+| Icons | Phosphor Icons (regular), self-hosted WOFF2, hand-declared glyph subset |
 
 ---
+
+## 1a. Visual design
+
+Modelled on Apple Books, using the iOS system palette so the app looks native on the
+devices it targets.
+
+- **Fonts are system fonts, not webfonts.** `-apple-system` resolves to **SF Pro** and
+  `ui-serif` to **New York** on Apple platforms — the faces Books itself uses. Neither
+  can be licensed for web redistribution, so non-Apple platforms fall back through
+  `system-ui` / Charter / Georgia.
+- **Colour** is the iOS system palette as CSS custom properties: `systemBackground`
+  white (pure black in dark mode), `label` / `secondaryLabel` / `tertiaryLabel`,
+  hairline separators, and **systemBlue** (`#007AFF` / `#0A84FF`) as the tint. Books
+  itself tints systemOrange, but blue is the platform default and reads as
+  interactive rather than decorative. The tint is two tokens — `--tint` and
+  `--tint-pressed` — so swapping to another system colour is a two-line change.
+- **Type** follows the iOS scale — 34pt large title, 17pt body, 13pt captions — with
+  SF Pro's negative tracking applied at body sizes.
+- **Large titles collapse.** Library and Settings render their title at 34pt inside the
+  scroll area; scrolling past it fades the compact title into the navigation bar and
+  fades in the hairline, as UIKit does.
+- **Icons: Phosphor, regular weight.** Ionicons is the closest match to iOS visually but
+  dropped its webfont at v5 and ships SVG only. Phosphor is geometric with rounded
+  terminals — the nearest available approximation of SF Symbols — is MIT licensed, and
+  ships a real WOFF2. SF Symbols itself cannot be used: Apple licenses it for Apple
+  platform apps only, not web redistribution.
+  - The font is declared by hand in `src/icons.css` rather than by importing
+    `@phosphor-icons/web/regular`. That import pulls 73 KB of CSS for ~1,500 icons and
+    makes Vite emit every format the package ships — a 3 MB SVG font plus 489 KB TTF
+    and WOFF. Only the WOFF2 and the twelve glyphs in use are declared, which is the
+    difference between a 4 MB and a 147 KB font payload.
+  - Adding an icon means copying its codepoint from the package's `style.css` and
+    adding the name to `IconName` in `src/components/Icon.tsx`.
 
 ## 2. Core concepts and vocabulary
 

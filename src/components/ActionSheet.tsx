@@ -43,13 +43,15 @@ export default function ActionSheet({ title, message, items, onClose }: Props) {
         aria-label={title ?? 'Actions'}
         onClick={(e) => e.stopPropagation()}
       >
-        {(title || message) && (
-          <div className="sheet__header">
-            {title && <p className="sheet__title">{title}</p>}
-            {message && <p className="sheet__message">{message}</p>}
-          </div>
-        )}
+        {/* Header lives inside the first group: iOS draws the title on the same
+            rounded card as the actions, not floating above it. */}
         <div className="sheet__group">
+          {(title || message) && (
+            <div className="sheet__header">
+              {title && <p className="sheet__title">{title}</p>}
+              {message && <p className="sheet__message">{message}</p>}
+            </div>
+          )}
           {items.map((item) => (
             <button
               key={item.label}

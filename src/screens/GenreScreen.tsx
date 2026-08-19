@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import NavBar, { NavButton } from '../components/NavBar';
+import NavBar, { BackButton } from '../components/NavBar';
 import Stub from '../components/Stub';
 import { useStory } from '../storage/useStories';
 import { AUDIENCE_PROFILE, AUDIENCES, GENRES, SETTINGS } from '../types';
@@ -15,11 +15,7 @@ export default function GenreScreen() {
     <>
       <NavBar
         title="Genre"
-        left={
-          <NavButton label="Back" onClick={() => navigate(-1)}>
-            ‹ Back
-          </NavButton>
-        }
+        left={<BackButton onClick={() => navigate(-1)} />}
       />
       <div className="screen">
         <Stub milestone="Milestone 3 — pill selectors + Confirm">

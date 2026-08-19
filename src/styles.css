@@ -1,37 +1,66 @@
-/* Design tokens and mobile/iPad shell. Screens layer their own styles on top. */
+/*
+ * Apple Books–style surface. Colours are the iOS system palette, type is the iOS
+ * scale, and the fonts resolve to the real system faces on Apple devices:
+ *   -apple-system  -> SF Pro       (UI)
+ *   ui-serif       -> New York     (reading)
+ * Neither can be licensed as a webfont, so non-Apple platforms fall back gracefully.
+ */
 
 :root {
-  --paper: #f7f3ec;
-  --paper-edge: #efe8dc;
-  --ink: #221f1a;
-  --ink-soft: #6b6355;
-  --rule: #ddd3c2;
-  --accent: #8a5a2b;
-  --accent-soft: #f0e3d2;
-  --danger: #a8321f;
-  --shadow: 0 1px 3px rgba(34, 31, 26, 0.14);
+  /* Backgrounds — iOS systemBackground / secondary / tertiary */
+  --bg: #ffffff;
+  --bg-grouped: #f2f2f7;
+  --bg-elevated: #ffffff;
+  --fill-quaternary: rgba(116, 116, 128, 0.08);
 
-  --nav-h: 48px;
+  /* Labels — iOS label / secondaryLabel / tertiaryLabel */
+  --label: #000000;
+  --label-2: rgba(60, 60, 67, 0.6);
+  --label-3: rgba(60, 60, 67, 0.3);
+
+  --separator: rgba(60, 60, 67, 0.29);
+  --separator-opaque: #c6c6c8;
+
+  /* systemBlue — the standard iOS accent used across Settings, Mail and the App
+     Store. Books itself tints orange, but blue is the platform default and reads as
+     interactive rather than decorative. */
+  --tint: #007aff;
+  --tint-pressed: rgba(0, 122, 255, 0.12);
+  --danger: #ff3b30;
+
+  --cover-shadow: 0 1px 2px rgba(0, 0, 0, 0.14), 0 6px 16px rgba(0, 0, 0, 0.14);
+
+  --nav-h: 44px;
   --gutter: 16px;
   --radius: 10px;
 
-  --font-body: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
-  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* ui-serif is New York on Apple platforms — what Books itself reaches for. */
+  --font-serif: ui-serif, 'New York', Charter, 'Iowan Old Style', Georgia, serif;
 
   --font-scale: 1;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #17150f;
-    --paper-edge: #201d16;
-    --ink: #e8e2d6;
-    --ink-soft: #9a9081;
-    --rule: #35302a;
-    --accent: #d3a06a;
-    --accent-soft: #2b241b;
-    --danger: #e0705c;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --bg: #000000;
+    --bg-grouped: #1c1c1e;
+    --bg-elevated: #1c1c1e;
+    --fill-quaternary: rgba(118, 118, 128, 0.24);
+
+    --label: #ffffff;
+    --label-2: rgba(235, 235, 245, 0.6);
+    --label-3: rgba(235, 235, 245, 0.3);
+
+    --separator: rgba(84, 84, 88, 0.65);
+    --separator-opaque: #38383a;
+
+    --tint: #0a84ff;
+    --tint-pressed: rgba(10, 132, 255, 0.22);
+    --danger: #ff453a;
+
+    --cover-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 16px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -48,23 +77,28 @@ body,
 
 body {
   margin: 0;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--label);
   font-family: var(--font-ui);
-  /* The reader is a paged surface, not a scrolling one. */
+  font-size: 17px; /* iOS body */
+  line-height: 1.294;
+  letter-spacing: -0.022em; /* SF Pro Text tracking at body size */
+  -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
 }
 
-/* dvh keeps the shell correct while iOS Safari's toolbars collapse. */
 .app {
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right)
-    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
 }
 
+/* ---- Navigation bar ----------------------------------------------------- */
+
 .nav {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -72,22 +106,54 @@ body {
   height: var(--nav-h);
   flex: 0 0 auto;
   padding: 0 8px;
-  border-bottom: 1px solid var(--rule);
-  background: var(--paper);
+  background: var(--bg);
+  z-index: 10;
+}
+
+/* Hairline that fades in once the large title has scrolled away, as iOS does. */
+.nav::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--separator);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.nav--bordered::after {
+  opacity: 1;
 }
 
 .nav__title {
   margin: 0;
   font-size: 17px;
   font-weight: 600;
+  letter-spacing: -0.022em;
   text-align: center;
-  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Compact title is hidden until the large title scrolls under the bar. */
+.nav__title--collapsing {
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+.nav--bordered .nav__title--collapsing {
+  opacity: 1;
+  transform: none;
 }
 
 .nav__side {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 .nav__side--right {
@@ -98,19 +164,43 @@ body {
   appearance: none;
   border: 0;
   background: transparent;
-  color: var(--accent);
+  color: var(--tint);
   font: inherit;
-  font-size: 15px;
-  padding: 8px 10px;
+  font-size: 17px;
+  letter-spacing: -0.022em;
+  padding: 0 8px;
   border-radius: 8px;
   cursor: pointer;
-  min-height: 40px;
+  min-height: 44px;
+  min-width: 44px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 2px;
 }
 .nav__btn:active {
-  background: var(--accent-soft);
+  opacity: 0.35;
+}
+.nav__btn:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: -2px;
+}
+/* Back chevron sits tight against its label, the way UINavigationBar draws it. */
+.nav__btn .ph {
+  font-size: 22px;
+  margin-right: -3px;
+  margin-left: -4px;
+}
+
+/* Large title, iOS style: lives in the scroll area and collapses into the bar. */
+.large-title {
+  font-size: 34px;
+  line-height: 41px;
+  font-weight: 700;
+  letter-spacing: 0.011em;
+  margin: 0;
+  padding: 4px var(--gutter) 10px;
+  color: var(--label);
 }
 
 .screen {
@@ -124,106 +214,33 @@ body {
   overflow: hidden;
 }
 
-.stub {
-  padding: var(--gutter);
-  max-width: 640px;
-  margin: 0 auto;
-  color: var(--ink-soft);
-  line-height: 1.55;
-}
-.stub h2 {
-  color: var(--ink);
-  font-family: var(--font-body);
-  font-weight: 600;
-}
-.stub code {
-  font-size: 12px;
-  background: var(--accent-soft);
-  padding: 1px 5px;
-  border-radius: 4px;
-  color: var(--ink);
-}
-.stub__list {
-  list-style: none;
-  padding: 0;
-  margin: 12px 0;
-  display: grid;
-  gap: 8px;
-}
-.stub__list a {
-  display: block;
-  padding: 12px 14px;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  background: var(--paper-edge);
-  color: var(--ink);
-  text-decoration: none;
-}
-.stub__badge {
-  display: inline-block;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--accent);
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  padding: 2px 8px;
-  margin-bottom: 10px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-.field {
-  width: 100%;
-  padding: 11px 12px;
-  font: inherit;
-  font-size: 16px; /* below 16px iOS Safari zooms the viewport on focus */
-  color: var(--ink);
-  background: var(--paper-edge);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-}
-.field:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
 /* ---- Library grid ------------------------------------------------------- */
 
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 22px var(--gutter);
-  padding: var(--gutter);
-  max-width: 1100px;
+  gap: 26px var(--gutter);
+  padding: 8px var(--gutter) 32px;
+  max-width: 1180px;
   margin: 0 auto;
   align-items: start;
 }
 
-/* iPad and wider: more columns rather than enormous covers. */
 @media (min-width: 700px) {
   .grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 28px 22px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px 24px;
   }
 }
-@media (min-width: 1000px) {
+@media (min-width: 1100px) {
   .grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 
 .grid__cell {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   min-width: 0;
 }
 
@@ -238,24 +255,24 @@ body {
   cursor: pointer;
   text-align: left;
   width: 100%;
-  border-radius: var(--radius);
 }
 
 .grid__cover-btn:active .cover,
 .grid__cell--create:active .cover {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
-.grid__cover-btn:focus-visible,
-.grid__cell--create:focus-visible {
-  outline: 2px solid var(--accent);
+.grid__cover-btn:focus-visible .cover,
+.grid__cell--create:focus-visible .cover {
+  outline: 2px solid var(--tint);
   outline-offset: 3px;
 }
 
 .grid__meta {
   display: flex;
   align-items: flex-start;
-  gap: 4px;
+  gap: 2px;
+  margin-top: 9px;
 }
 
 .grid__text {
@@ -265,12 +282,12 @@ body {
   flex: 1 1 auto;
 }
 
+/* iOS subheadline / caption pairing, as under a Books cover. */
 .grid__title {
-  font-family: var(--font-body);
-  font-size: 14px;
-  line-height: 1.25;
-  color: var(--ink);
-  /* Two-line clamp: titles vary wildly and the grid must stay aligned. */
+  font-size: 13px;
+  line-height: 1.3;
+  letter-spacing: -0.008em;
+  color: var(--label);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -278,9 +295,10 @@ body {
 }
 
 .grid__sub {
-  font-size: 11px;
-  color: var(--ink-soft);
-  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.33;
+  color: var(--label-2);
+  margin-top: 1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -290,37 +308,39 @@ body {
   appearance: none;
   border: 0;
   background: transparent;
-  color: var(--ink-soft);
-  font-size: 18px;
-  line-height: 1;
+  color: var(--label-2);
   cursor: pointer;
-  /* Small glyph, but the tap target must still clear 44px. */
-  width: 32px;
-  height: 32px;
-  margin: -4px -6px 0 0;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  margin: -3px -6px 0 0;
+  border-radius: 14px;
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
 }
 .grid__more:active {
-  background: var(--accent-soft);
-  color: var(--ink);
+  background: var(--fill-quaternary);
+  color: var(--label);
 }
 
 .library__empty {
   text-align: center;
-  color: var(--ink-soft);
-  padding: 0 var(--gutter) var(--gutter);
+  color: var(--label-2);
+  padding: 8px var(--gutter) var(--gutter);
   max-width: 320px;
   margin: 0 auto;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.4;
 }
 
 .library__dev {
   display: flex;
   justify-content: center;
   gap: 4px;
-  padding: 8px 0 24px;
-  opacity: 0.6;
+  padding: 8px 0 28px;
+  opacity: 0.5;
 }
 
 /* ---- Covers ------------------------------------------------------------- */
@@ -328,12 +348,22 @@ body {
 .cover {
   aspect-ratio: 2 / 3;
   width: 100%;
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
-  background: var(--paper-edge);
-  box-shadow: var(--shadow), 0 6px 14px rgba(34, 31, 26, 0.12);
-  transition: transform 120ms ease;
+  background: var(--bg-grouped);
+  box-shadow: var(--cover-shadow);
+  transition: transform 130ms ease;
   position: relative;
+}
+
+/* Books draws a faint inner edge so pale covers still read against white. */
+.cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
 }
 
 .cover__img {
@@ -348,7 +378,6 @@ body {
   padding: 7%;
 }
 
-/* Inner rule, the way a printed cover carries a frame. */
 .cover__frame {
   flex: 1;
   border: 1px solid rgba(255, 255, 255, 0.28);
@@ -363,9 +392,10 @@ body {
 }
 
 .cover__title {
-  font-family: var(--font-body);
+  font-family: var(--font-serif);
   font-size: clamp(12px, 3.4vw, 17px);
   line-height: 1.2;
+  letter-spacing: 0;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   display: -webkit-box;
   -webkit-line-clamp: 4;
@@ -375,8 +405,14 @@ body {
 
 @media (min-width: 700px) {
   .cover__title {
-    font-size: 16px;
+    font-size: 15px;
   }
+}
+
+.cover__ornament {
+  font-size: 24px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1;
 }
 
 .cover__genre {
@@ -391,23 +427,24 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  background: var(--paper-edge);
-  border: 2px dashed var(--rule);
+  gap: 6px;
+  background: var(--bg-grouped);
   box-shadow: none;
-  color: var(--ink-soft);
+  color: var(--label-2);
+}
+.cover--create::after {
+  box-shadow: inset 0 0 0 1px var(--separator);
 }
 
 .cover__plus {
-  font-size: 34px;
+  font-size: 30px;
+  color: var(--tint);
   line-height: 1;
-  font-weight: 200;
-  color: var(--accent);
 }
 
 .cover__create-label {
   font-size: 13px;
-  font-family: var(--font-body);
+  letter-spacing: -0.008em;
 }
 
 /* ---- Action sheet ------------------------------------------------------- */
@@ -415,12 +452,12 @@ body {
 .sheet__backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(20, 17, 12, 0.4);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: flex-end;
   justify-content: center;
   z-index: 100;
-  animation: fade-in 160ms ease;
+  animation: fade-in 200ms ease;
   padding: 8px;
   padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
@@ -431,52 +468,54 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  animation: sheet-up 220ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  animation: sheet-up 280ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .sheet__group {
-  background: var(--paper);
-  border-radius: 14px;
+  background: var(--bg-elevated);
+  border-radius: 13px;
   overflow: hidden;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.22);
+}
+@media (prefers-color-scheme: light) {
+  .sheet__group {
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(20px);
+  }
 }
 
 .sheet__header {
-  padding: 14px 18px 12px;
+  padding: 15px 16px 13px;
   text-align: center;
-  border-bottom: 1px solid var(--rule);
-  background: var(--paper);
-  border-radius: 14px 14px 0 0;
-}
-.sheet__header + .sheet__group {
-  border-radius: 0 0 14px 14px;
-  margin-top: -8px;
+  border-bottom: 0.5px solid var(--separator);
+  background: transparent;
 }
 
 .sheet__title {
   margin: 0;
-  font-family: var(--font-body);
-  font-size: 15px;
-  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.006em;
+  color: var(--label-2);
 }
 
 .sheet__message {
-  margin: 6px 0 0;
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--ink-soft);
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.38;
+  color: var(--label-2);
 }
 
 .sheet__item {
   appearance: none;
   border: 0;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 0.5px solid var(--separator);
   background: transparent;
   width: 100%;
-  padding: 15px 18px;
+  padding: 14px 16px;
   font: inherit;
-  font-size: 16px;
-  color: var(--accent);
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  color: var(--tint);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -487,11 +526,10 @@ body {
   border-bottom: 0;
 }
 .sheet__item:active:not(:disabled) {
-  background: var(--accent-soft);
+  background: var(--fill-quaternary);
 }
 .sheet__item:disabled {
-  color: var(--ink-soft);
-  opacity: 0.55;
+  color: var(--label-3);
   cursor: default;
 }
 .sheet__item--destructive {
@@ -499,12 +537,13 @@ body {
 }
 .sheet__item--cancel {
   font-weight: 600;
-  color: var(--ink);
+  color: var(--tint);
 }
 
 .sheet__note {
-  font-size: 11px;
-  color: var(--ink-soft);
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--label-3);
 }
 
 @keyframes fade-in {
@@ -514,8 +553,7 @@ body {
 }
 @keyframes sheet-up {
   from {
-    transform: translateY(14px);
-    opacity: 0;
+    transform: translateY(100%);
   }
 }
 
@@ -524,75 +562,79 @@ body {
 .btn {
   appearance: none;
   font: inherit;
-  font-size: 15px;
-  padding: 10px 16px;
+  font-size: 17px;
+  letter-spacing: -0.022em;
+  padding: 11px 18px;
   min-height: 44px;
-  border: 1px solid var(--rule);
-  border-radius: 10px;
-  background: var(--paper-edge);
-  color: var(--ink);
+  border: 0;
+  border-radius: 12px;
+  background: var(--fill-quaternary);
+  color: var(--tint);
   cursor: pointer;
 }
 .btn:active:not(:disabled) {
-  background: var(--accent-soft);
+  opacity: 0.55;
 }
 .btn:disabled {
-  opacity: 0.45;
+  color: var(--label-3);
   cursor: default;
 }
 .btn:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--tint);
   outline-offset: 2px;
 }
 .btn--primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--tint);
   color: #fff;
+  font-weight: 600;
 }
-.btn--primary:active:not(:disabled) {
-  filter: brightness(0.92);
+.btn--primary:disabled {
+  background: var(--fill-quaternary);
+  color: var(--label-3);
 }
 .btn--selected {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--ink);
+  background: var(--tint);
+  color: #fff;
   font-weight: 600;
 }
 .btn--danger {
   color: var(--danger);
-  border-color: var(--danger);
-  background: transparent;
 }
 
-/* ---- Settings ----------------------------------------------------------- */
+/* ---- Settings, as an iOS grouped list ----------------------------------- */
 
 .settings {
-  max-width: 560px;
+  max-width: 620px;
   margin: 0 auto;
-  padding: var(--gutter);
-  padding-bottom: 40px;
+  padding: 0 var(--gutter) 40px;
 }
 
 .settings__banner {
-  background: var(--accent-soft);
-  border: 1px solid var(--rule);
+  background: var(--tint-pressed);
   border-radius: var(--radius);
   padding: 12px 14px;
-  margin: 0 0 20px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--ink);
+  margin: 4px 0 24px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--label);
 }
 
 .settings__section {
   margin-bottom: 30px;
 }
+/* iOS grouped lists leave a clear gap between the large title and the first header. */
+.settings__section:first-of-type {
+  margin-top: 10px;
+}
 
+/* iOS grouped-list section header: small, uppercase, secondary. */
 .settings__heading {
-  font-family: var(--font-body);
-  font-size: 17px;
-  font-weight: 600;
-  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.006em;
+  text-transform: uppercase;
+  color: var(--label-2);
+  margin: 0 0 8px 4px;
 }
 
 .settings__row {
@@ -603,42 +645,113 @@ body {
 }
 
 .settings__note {
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--ink-soft);
-  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--label-2);
+  margin: 10px 4px 0;
 }
 
 .settings__status {
   margin: 12px 0 0;
-  font-size: 13.5px;
-  line-height: 1.45;
-  padding: 9px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--rule);
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 10px 13px;
+  border-radius: var(--radius);
 }
 .settings__status--ok {
-  color: #1f5f4e;
-  background: rgba(31, 95, 78, 0.09);
-  border-color: rgba(31, 95, 78, 0.3);
+  color: #248a3d;
+  background: rgba(52, 199, 89, 0.12);
 }
 .settings__status--error {
   color: var(--danger);
-  background: rgba(168, 50, 31, 0.08);
-  border-color: rgba(168, 50, 31, 0.28);
+  background: rgba(255, 59, 48, 0.12);
 }
 .settings__status--info {
-  color: var(--ink-soft);
+  color: var(--label-2);
+  background: var(--fill-quaternary);
 }
-
 @media (prefers-color-scheme: dark) {
   .settings__status--ok {
-    color: #7fd0b6;
+    color: #30d158;
   }
 }
 
-.cover__ornament {
-  font-size: 26px;
-  color: rgba(255, 255, 255, 0.5);
-  line-height: 1;
+.field {
+  width: 100%;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 17px; /* below 16px iOS Safari zooms the viewport on focus */
+  letter-spacing: -0.022em;
+  color: var(--label);
+  background: var(--bg-grouped);
+  border: 0;
+  border-radius: var(--radius);
+}
+.field::placeholder {
+  color: var(--label-3);
+}
+.field:focus {
+  outline: 2px solid var(--tint);
+  outline-offset: -1px;
+}
+
+/* ---- Temporary stub bodies for unbuilt screens -------------------------- */
+
+.stub {
+  padding: 0 var(--gutter) var(--gutter);
+  max-width: 620px;
+  margin: 0 auto;
+  color: var(--label-2);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.stub h2 {
+  color: var(--label);
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.stub code {
+  font-size: 13px;
+  background: var(--fill-quaternary);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--label);
+}
+.stub__list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: grid;
+  gap: 8px;
+}
+.stub__list a {
+  display: block;
+  padding: 13px 15px;
+  border-radius: var(--radius);
+  background: var(--bg-grouped);
+  color: var(--label);
+  text-decoration: none;
+  font-size: 15px;
+}
+.stub__badge {
+  display: inline-block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--label-2);
+  background: var(--fill-quaternary);
+  border-radius: 999px;
+  padding: 3px 9px;
+  margin-bottom: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

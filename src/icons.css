@@ -1,0 +1,62 @@
+/*
+ * Phosphor Icons, regular weight — self-hosted, MIT licensed.
+ *
+ * Declared by hand rather than importing @phosphor-icons/web/regular, which pulls in
+ * 73 KB of CSS for ~1,500 icons and makes Vite emit every font format the package
+ * ships: an SVG font (3 MB), TTF and WOFF (489 KB each) that no browser from the last
+ * decade would ever request. Only the WOFF2 and the twelve glyphs below are used.
+ *
+ * Adding an icon: copy its codepoint from
+ * node_modules/@phosphor-icons/web/src/regular/style.css and add it to IconName.
+ */
+
+@font-face {
+  font-family: 'Phosphor';
+  src: url('@phosphor-icons/web/regular/Phosphor.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  /* block, not swap: a fallback glyph in an icon slot is worse than a brief blank. */
+  font-display: block;
+}
+
+.ph,
+.ph-bold,
+.ph-fill {
+  font-family: 'Phosphor' !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  letter-spacing: normal;
+  display: inline-block;
+  vertical-align: middle;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * Only the regular weight is loaded. Phosphor's bold/fill are separate font files;
+ * synthesising them from the regular outline keeps the payload at one file, which
+ * matters more here than exact stroke fidelity on a handful of glyphs.
+ */
+.ph-bold {
+  -webkit-text-stroke: 0.4px currentColor;
+}
+.ph-fill {
+  -webkit-text-stroke: 0.7px currentColor;
+}
+
+.ph-gear:before { content: '\e270'; }
+.ph-trophy:before { content: '\e67e'; }
+.ph-book-open:before { content: '\e0e6'; }
+.ph-books:before { content: '\e758'; }
+.ph-caret-left:before { content: '\e138'; }
+.ph-caret-right:before { content: '\e13a'; }
+.ph-plus:before { content: '\e3d4'; }
+.ph-dots-three:before { content: '\e1fe'; }
+.ph-x:before { content: '\e4f6'; }
+.ph-export:before { content: '\eaf0'; }
+.ph-trash:before { content: '\e4a6'; }
+.ph-check:before { content: '\e182'; }

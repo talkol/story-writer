@@ -1,5 +1,6 @@
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import NavBar, { NavButton } from '../components/NavBar';
+import Icon from '../components/Icon';
+import NavBar, { BackButton, NavButton } from '../components/NavBar';
 import Stub from '../components/Stub';
 import { useStory } from '../storage/useStories';
 
@@ -19,21 +20,17 @@ export default function ReadScreen() {
     <>
       <NavBar
         title="Read"
-        left={
-          <NavButton label="Library" onClick={() => navigate('/library')}>
-            ‹ Library
-          </NavButton>
-        }
+        left={<BackButton label="Library" onClick={() => navigate('/library')} />}
         right={
           <>
             <NavButton
               label="Achievements"
               onClick={() => navigate(`/story/${story.id}/achievements`)}
             >
-              🏆
+              <Icon name="trophy" size={21} />
             </NavButton>
             <NavButton label="Story settings" onClick={() => navigate(`/story/${story.id}/genre`)}>
-              📖
+              <Icon name="book-open" size={21} />
             </NavButton>
           </>
         }

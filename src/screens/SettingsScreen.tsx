@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { testApiKey } from '../ai/client';
 import ActionSheet from '../components/ActionSheet';
-import NavBar, { NavButton } from '../components/NavBar';
+import NavBar, { BackButton, LargeTitle, useScrollRef } from '../components/NavBar';
 import { StorageFullError } from '../storage/quota';
 import { loadSettings, saveSettings } from '../storage/settings';
 import { replaceAll } from '../storage/stories';
@@ -21,6 +21,7 @@ export default function SettingsScreen() {
   const [status, setStatus] = useState<Status>(null);
   const [testing, setTesting] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const scrollRef = useScrollRef();
 
   const dirty = keyInput.trim() !== (settings.apiKey ?? '');
 
@@ -62,14 +63,18 @@ export default function SettingsScreen() {
     <>
       <NavBar
         title="Settings"
+        largeTitle
+        scrollRef={scrollRef}
         left={
-          <NavButton label="Back" onClick={() => (next ? navigate('/library') : navigate(-1))}>
-            ‹ Back
-          </NavButton>
+          <BackButton
+            label={next ? 'Library' : 'Back'}
+            onClick={() => (next ? navigate('/library') : navigate(-1))}
+          />
         }
       />
 
-      <div className="screen">
+      <div className="screen" ref={scrollRef}>
+        <LargeTitle>Settings</LargeTitle>
         <div className="settings">
           {next && (
             <p className="settings__banner">

@@ -1,4 +1,5 @@
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import Icon from '../components/Icon';
 import NavBar, { NavButton } from '../components/NavBar';
 import Stub from '../components/Stub';
 import { useStory } from '../storage/useStories';
@@ -17,7 +18,7 @@ export default function AchievementsScreen() {
         title="Achievements"
         right={
           <NavButton label="Close" onClick={() => navigate(-1)}>
-            ✕
+            <Icon name="x" size={20} weight="bold" />
           </NavButton>
         }
       />

@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import App from './App';
+import './icons.css';
 import './styles.css';
 
 // Hash routing: the app is a static bundle that may be served from a subdirectory, and

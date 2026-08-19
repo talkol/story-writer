@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ActionSheet, { type SheetItem } from '../components/ActionSheet';
 import CoverTile, { CreateTile } from '../components/CoverTile';
-import NavBar, { NavButton } from '../components/NavBar';
+import Icon from '../components/Icon';
+import NavBar, { LargeTitle, NavButton, useScrollRef } from '../components/NavBar';
 import { deleteStoryAndCover } from '../storage/library';
 import { hasApiKey } from '../storage/settings';
 import { useStories } from '../storage/useStories';
@@ -17,6 +18,7 @@ export default function LibraryScreen() {
   const navigate = useNavigate();
   const stories = useStories();
   const [sheet, setSheet] = useState<Sheet>(null);
+  const scrollRef = useScrollRef();
 
   function openStory(story: Story) {
     navigate(`/story/${story.id}/read`);
@@ -61,14 +63,17 @@ export default function LibraryScreen() {
     <>
       <NavBar
         title="Library"
+        largeTitle
+        scrollRef={scrollRef}
         right={
           <NavButton label="Settings" onClick={() => navigate('/settings')}>
-            <GearIcon />
+            <Icon name="gear" size={22} />
           </NavButton>
         }
       />
 
-      <div className="screen">
+      <div className="screen" ref={scrollRef}>
+        <LargeTitle>Library</LargeTitle>
         <div className="grid">
           <button
             type="button"
@@ -101,7 +106,7 @@ export default function LibraryScreen() {
                   aria-label={`More options for ${story.title || 'Untitled Story'}`}
                   onClick={() => setSheet({ kind: 'menu', story })}
                 >
-                  …
+                  <Icon name="dots-three" weight="bold" />
                 </button>
               </div>
             </div>
@@ -149,16 +154,3 @@ function describe(story: Story): string {
   return `${story.genre} · Part ${written} of ${story.totalParts}`;
 }
 
-function GearIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <circle cx="10" cy="10" r="2.6" stroke="currentColor" strokeWidth="1.5" />
-      <path
-        d="M10 2.2v1.9M10 15.9v1.9M17.8 10h-1.9M4.1 10H2.2M15.5 4.5l-1.3 1.3M5.8 14.2l-1.3 1.3M15.5 15.5l-1.3-1.3M5.8 5.8L4.5 4.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}

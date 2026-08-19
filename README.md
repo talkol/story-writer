@@ -8,6 +8,12 @@ Runs entirely in the browser. No backend, no accounts, no server-side state. Sto
 live in your browser's local storage; the AI is called directly from the page with
 your own OpenAI API key.
 
+The interface is modelled on Apple Books — white ground, the iOS system palette and
+type scale, collapsing large titles, and systemBlue as the tint. Fonts resolve to
+the real system faces on Apple devices (SF Pro for UI, New York for reading); icons
+are [Phosphor](https://phosphoricons.com), self-hosted as a WOFF2. See
+[SPEC.md §1a](SPEC.md) for why those choices and not SF Symbols.
+
 See [SPEC.md](SPEC.md) for the full product and technical spec.
 
 > **Status: milestone 2 of 10.** The scaffold, storage layer, Library, and Settings

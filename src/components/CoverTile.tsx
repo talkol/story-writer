@@ -1,3 +1,4 @@
+import Icon from './Icon';
 import { useCoverUrl } from '../storage/useCoverUrl';
 import type { Genre, Story } from '../types';
 
@@ -62,8 +63,8 @@ export default function CoverTile({ story }: Props) {
 export function CreateTile() {
   return (
     <div className="cover cover--create">
-      <span className="cover__plus" aria-hidden="true">
-        +
+      <span className="cover__plus">
+        <Icon name="plus" size={30} />
       </span>
       <span className="cover__create-label">Create New</span>
     </div>
