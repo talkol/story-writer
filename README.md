@@ -1,0 +1,168 @@
+# Story App
+
+An AI-driven, choose-your-own-adventure story maker. Pick a genre, the AI writes a
+chapter, read it like a book, then choose one of four actions to steer the plot —
+until the story reaches its ending.
+
+Runs entirely in the browser. No backend, no accounts, no server-side state. Stories
+live in your browser's local storage; the AI is called directly from the page with
+your own OpenAI API key.
+
+See [SPEC.md](SPEC.md) for the full product and technical spec.
+
+> **Status: milestone 1 of 10.** The scaffold, routing, and storage layer are done and
+> tested. Most screens are stubs, and the AI client does not exist yet — creating a
+> real story is not yet possible. The Settings screen is fully working. See
+> [SPEC.md §10](SPEC.md) for the milestone list.
+
+---
+
+## Requirements
+
+- **Node 18, 20, or 22+** (developed on 22.11). Check with `node -v`.
+- A modern browser. The reader targets mobile Safari and iPad Safari first.
+- An **OpenAI API key**, once the AI milestones land. Not needed to run what exists today.
+
+## Install
+
+```bash
+npm install
+```
+
+## Develop
+
+```bash
+npm run dev
+```
+
+Opens on <http://localhost:5173>. The server binds to `0.0.0.0`, so you can also open
+it on a phone or iPad on the same network — visit `http://<your-mac-ip>:5173`. That is
+the fastest way to check the reader on a real device, and it is worth doing often.
+
+### Dev-only tooling
+
+Development builds seed three fixture stories on first load (a 4-part YA mystery with
+an achievement, a children's book, and an empty draft) so the UI can be built and
+reviewed before the AI client exists. They are exposed on `window.__dev`:
+
+| Call | What it does |
+|---|---|
+| `__dev.seedFixtures()` | Replace the library with the fixtures |
+| `__dev.clearStories()` | Empty the library |
+| `__dev.selftest()` | Run the 20-assertion storage smoke test |
+
+`__dev.selftest()` exercises migrations, store CRUD, the localStorage round-trip,
+settings persistence, and the IndexedDB cover pipeline against a real browser — the
+places where localStorage quirks, quota errors, and canvas encoding actually bite.
+Run it after touching anything under `src/storage/`. It saves and restores your data,
+so it is safe to run against a populated library. Results print with `console.table`.
+
+Everything under `src/dev/` is reached only through a dynamic import inside an
+`import.meta.env.DEV` branch, so Rollup drops it — fixture prose included — from
+production builds.
+
+### Other scripts
+
+```bash
+npm run typecheck
+```
+
+```bash
+npm run build
+```
+
+```bash
+npm run preview
+```
+
+`preview` serves the built `dist/` on <http://localhost:4173>, which is how you check
+a production build before publishing. Note that fixtures and `window.__dev` are absent
+there — that is expected, and is the point.
+
+## Project layout
+
+```
+src/
+  main.tsx App.tsx types.ts styles.css
+  screens/     one component per screen in the spec
+  components/  NavBar, Stub, and shared UI as it lands
+  storage/     the persistence layer — see below
+  dev/         fixtures, devtools, selftest (never shipped)
+```
+
+**Storage** is the part worth knowing before you change anything:
+
+- `stories.ts` is the single source of truth for the library. It holds the collection
+  in memory, mirrors every mutation to localStorage, and exposes
+  `subscribe`/`getSnapshot` for `useSyncExternalStore`. Screens bind through
+  `useStories()` and `useStory(id)`.
+- `migrations.ts` wraps persisted data in a `{ schemaVersion, data }` envelope. When
+  you change a stored shape, bump `SCHEMA_VERSION` in `keys.ts` **and** add the
+  matching migration — a version bump without one will silently discard user data.
+- `quota.ts` normalises `QuotaExceededError` across browsers into a `StorageFullError`
+  with a message worth showing a user.
+- `covers.idb.ts` keeps cover images in IndexedDB as Blobs, downscaled to 512×768
+  JPEG first. Covers must never go into localStorage — a full-size image is 1–2 MB as
+  base64 and would exhaust the ~5 MB quota after two or three books.
+
+## Publish
+
+The build is a static bundle — HTML, one JS file, one CSS file. Any static host works,
+and no server configuration or SPA rewrite rule is needed, because routing is
+hash-based (`/#/library`) and never touches the server path.
+
+```bash
+npm run build
+```
+
+Everything to publish is then in `dist/`.
+
+`base` is set to `./` in `vite.config.ts`, so the build runs from any path — a domain
+root, a GitHub Pages project subdirectory, or a nested folder. Do not change it to an
+absolute path unless you also stop deploying to subdirectories.
+
+**Drag-and-drop hosts** — Netlify Drop, Cloudflare Pages, Surge: upload or drop the
+`dist/` folder. Done.
+
+**Connected to a git repo** — set the build command to `npm run build` and the publish
+directory to `dist`. This is the standard Vite setup on Netlify, Vercel, and
+Cloudflare Pages; none of them need a framework preset beyond Vite.
+
+**GitHub Pages** — push `dist/` to a `gh-pages` branch, or add a workflow that builds
+and uploads it. The relative `base` means a project site at
+`https://you.github.io/story-writer/` works without further configuration.
+
+**Any web server** — copy `dist/` anywhere it will be served over HTTP. Note that
+opening `dist/index.html` directly from the filesystem will *not* work: the bundle
+uses ES modules, and browsers block those over `file://`.
+
+### Before you publish publicly
+
+The app calls the OpenAI API straight from the browser, using a key held in the
+visitor's own local storage. That means:
+
+- **Your key is never bundled.** There is no key in `dist/`, and publishing the site
+  does not expose yours. Each visitor enters their own in Settings.
+- **A published site is BYO-key.** Anyone who opens it sees an empty library and is
+  asked for a key before they can create a story. They pay for their own usage.
+- **A browser-held key is readable** by anything running on that origin and by anyone
+  with access to that device. Use a dedicated key with a spend limit. This is fine for
+  a personal app; if you ever want to supply the key yourself for other people to use,
+  that needs a server-side proxy, which this project deliberately does not have.
+
+## Troubleshooting
+
+**Stale modules or a 404 for a file you moved** — Vite caches the module graph.
+Restart `npm run dev`.
+
+**Fixtures are gone and won't come back** — they seed only when the library is empty.
+Run `__dev.seedFixtures()`.
+
+**"Storage full" when saving** — the localStorage quota is roughly 5 MB. Export and
+remove an older story. If you hit this with only a few stories, something is writing
+image data to localStorage instead of IndexedDB; that is a bug worth chasing.
+
+**Nothing renders after a schema change** — check the console for
+`[storage] payload version N is newer than M`. That means data was written by a build
+with a higher `SCHEMA_VERSION` than the one you are running. It is refused rather than
+guessed at. Run `__dev.clearStories()` to reset.

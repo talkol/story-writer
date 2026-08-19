@@ -1,0 +1,196 @@
+/* Design tokens and mobile/iPad shell. Screens layer their own styles on top. */
+
+:root {
+  --paper: #f7f3ec;
+  --paper-edge: #efe8dc;
+  --ink: #221f1a;
+  --ink-soft: #6b6355;
+  --rule: #ddd3c2;
+  --accent: #8a5a2b;
+  --accent-soft: #f0e3d2;
+  --danger: #a8321f;
+  --shadow: 0 1px 3px rgba(34, 31, 26, 0.14);
+
+  --nav-h: 48px;
+  --gutter: 16px;
+  --radius: 10px;
+
+  --font-body: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --font-scale: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #17150f;
+    --paper-edge: #201d16;
+    --ink: #e8e2d6;
+    --ink-soft: #9a9081;
+    --rule: #35302a;
+    --accent: #d3a06a;
+    --accent-soft: #2b241b;
+    --danger: #e0705c;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  }
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  /* The reader is a paged surface, not a scrolling one. */
+  overscroll-behavior: none;
+}
+
+/* dvh keeps the shell correct while iOS Safari's toolbars collapse. */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.nav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  height: var(--nav-h);
+  flex: 0 0 auto;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.nav__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+.nav__side {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.nav__side--right {
+  justify-content: flex-end;
+}
+
+.nav__btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 15px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.nav__btn:active {
+  background: var(--accent-soft);
+}
+
+.screen {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.screen--fixed {
+  overflow: hidden;
+}
+
+.stub {
+  padding: var(--gutter);
+  max-width: 640px;
+  margin: 0 auto;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+.stub h2 {
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 600;
+}
+.stub code {
+  font-size: 12px;
+  background: var(--accent-soft);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--ink);
+}
+.stub__list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: grid;
+  gap: 8px;
+}
+.stub__list a {
+  display: block;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper-edge);
+  color: var(--ink);
+  text-decoration: none;
+}
+.stub__badge {
+  display: inline-block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-bottom: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.field {
+  width: 100%;
+  padding: 11px 12px;
+  font: inherit;
+  font-size: 16px; /* below 16px iOS Safari zooms the viewport on focus */
+  color: var(--ink);
+  background: var(--paper-edge);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.field:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

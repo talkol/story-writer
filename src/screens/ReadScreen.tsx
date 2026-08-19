@@ -1,0 +1,72 @@
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import NavBar, { NavButton } from '../components/NavBar';
+import Stub from '../components/Stub';
+import { useStory } from '../storage/useStories';
+
+export default function ReadScreen() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const story = useStory(id);
+
+  if (!story) return <Navigate to="/library" replace />;
+
+  const words = story.parts.reduce(
+    (sum, p) => sum + (p.kind === 'prose' ? p.text.split(/\s+/).length : 0),
+    0,
+  );
+
+  return (
+    <>
+      <NavBar
+        title="Read"
+        left={
+          <NavButton label="Library" onClick={() => navigate('/library')}>
+            ‹ Library
+          </NavButton>
+        }
+        right={
+          <>
+            <NavButton
+              label="Achievements"
+              onClick={() => navigate(`/story/${story.id}/achievements`)}
+            >
+              🏆
+            </NavButton>
+            <NavButton label="Story settings" onClick={() => navigate(`/story/${story.id}/genre`)}>
+              📖
+            </NavButton>
+          </>
+        }
+      />
+      <div className="screen screen--fixed">
+        <Stub milestone="Milestone 4 — paginated reader + page-turn">
+          <h2>{story.title || 'Untitled Story'}</h2>
+          <p>
+            {story.parts.length} parts stored ({words} words), {story.achievements.length}{' '}
+            achievement(s), resume anchor{' '}
+            <code>
+              part {story.readingPosition.partIndex} / word {story.readingPosition.wordOffset}
+            </code>
+            .
+          </p>
+          <p>
+            The real screen measures this text against the live container, breaks it into
+            pages, and turns them with a 3D transform. Tap zones: left third back, right
+            third forward, centre toggles chrome.
+          </p>
+          {story.pendingActions.length > 0 && (
+            <p>
+              <button
+                type="button"
+                className="nav__btn"
+                onClick={() => navigate(`/story/${story.id}/actions`)}
+              >
+                What happens next? →
+              </button>
+            </p>
+          )}
+        </Stub>
+      </div>
+    </>
+  );
+}
