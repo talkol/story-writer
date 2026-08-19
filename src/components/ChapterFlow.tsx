@@ -7,6 +7,8 @@ interface Props {
   metrics: ReaderMetrics;
   /** Vertical slice to show, in pages. Omitted by the hidden measurer. */
   sliceIndex?: number;
+  /** e.g. "Chapter 3". Rendered at the head of the flow, above the prose. */
+  heading?: string;
 }
 
 /**
@@ -15,7 +17,7 @@ interface Props {
  * layout rather than a separate re-flow.
  */
 const ChapterFlow = forwardRef<HTMLDivElement, Props>(function ChapterFlow(
-  { text, metrics, sliceIndex = 0 },
+  { text, metrics, sliceIndex = 0, heading },
   ref,
 ) {
   return (
@@ -30,8 +32,12 @@ const ChapterFlow = forwardRef<HTMLDivElement, Props>(function ChapterFlow(
         transform: `translateY(${-sliceIndex * metrics.pageHeight}px)`,
         // Paragraph spacing is exactly one line, keeping the flow on the grid.
         ['--para-gap' as string]: `${metrics.lineHeight}px`,
+        // The heading occupies exactly two lines, so with its one-line margin it is
+        // three whole lines tall and the grid survives it.
+        ['--heading-lh' as string]: `${metrics.lineHeight * 2}px`,
       }}
     >
+      {heading && <h2 className="flow__heading">{heading}</h2>}
       {toParagraphs(text).map((paragraph, i) => (
         <p key={i}>{renderInline(paragraph)}</p>
       ))}

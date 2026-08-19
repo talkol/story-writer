@@ -12,7 +12,7 @@ import type { FontScale } from '../types';
  * rounded down to a whole number of lines.
  */
 
-const BASE_FONT_SIZE = 19;
+const BASE_FONT_SIZE = 21;
 const LINE_RATIO = 1.6;
 
 /**

@@ -39,8 +39,10 @@ export default function ReadScreen() {
 
   // Changing text or column width invalidates every measurement.
   const signature = useMemo(
-    () => `${metrics?.columnWidth}:${metrics?.lineHeight}:${proseChapters.map((c) => c.chapter.text.length).join(',')}`,
-    [metrics?.columnWidth, metrics?.lineHeight, proseChapters],
+    () =>
+      `${metrics?.columnWidth}:${metrics?.lineHeight}:${story?.chapters.length}:` +
+      proseChapters.map((c) => c.chapter.text.length).join(','),
+    [metrics?.columnWidth, metrics?.lineHeight, story?.chapters.length, proseChapters],
   );
 
   const slices = useChapterSlices(measurerRef, metrics, signature);
@@ -259,7 +261,11 @@ export default function ReadScreen() {
         {metrics &&
           proseChapters.map(({ chapter, index }) => (
             <div key={index} data-chapter={index} className="measurer__item">
-              <ChapterFlow text={chapter.text} metrics={metrics} />
+              <ChapterFlow
+                text={chapter.text}
+                metrics={metrics}
+                heading={`Chapter ${countProseChaptersTo(story, index)}`}
+              />
             </div>
           ))}
       </div>
@@ -299,6 +305,7 @@ function Page({
       <div className="page" style={box}>
         <AchievementPage
           achievement={story.achievements.find((a) => a.id === ref.achievementId)}
+          metrics={metrics}
         />
       </div>
     );
@@ -310,7 +317,12 @@ function Page({
   return (
     <div className="page" style={box}>
       <div className="page__clip" style={{ height: metrics.pageHeight }}>
-        <ChapterFlow text={chapter.text} metrics={metrics} sliceIndex={ref.sliceIndex} />
+        <ChapterFlow
+          text={chapter.text}
+          metrics={metrics}
+          sliceIndex={ref.sliceIndex}
+          heading={`Chapter ${countProseChaptersTo(story, ref.chapterIndex)}`}
+        />
       </div>
     </div>
   );

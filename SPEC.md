@@ -219,10 +219,19 @@ Two modes, same component:
 - Empty state: "No achievements yet — keep making bold choices."
 
 ### 4.6 Achievement page
-- A page inside the book, not a separate route. Centered, decorated: "Achievement
-  Unlocked", the title in display type, the description sentence beneath, a trophy
-  glyph. Appears at the end of the part in which it was earned, and it participates in
-  page navigation and PDF export like any other page.
+- A page inside the book, not a separate route. Centred: a trophy glyph, "Achievement
+  Unlocked" as an eyebrow, the title in display type, and the description sentence
+  beneath. Appears at the end of the chapter in which it was earned, and participates
+  in page navigation and PDF export like any other page.
+- Type is sized in `em` against the reader's own body size, so the **description is
+  exactly the size and leading of the book's prose** and the whole page scales with
+  the font-size setting rather than staying fixed while the prose grows around it.
+- Vertical spacing is driven by the reader's line height (`--ach-rhythm`): a generous
+  interval above the eyebrow and below the title, and a tight one between eyebrow and
+  title, which read as a single unit.
+- The page is a fixed-height box, so a pathologically long description would clip
+  rather than reflow. At the largest font scale on a phone there is roughly 275px of
+  headroom for a one-sentence description, which is what §6.4 asks the model for.
 
 ### 4.7 Settings *(new — the original spec had nowhere to enter a key)*
 - OpenAI API key field (password-masked, with a "Test key" button that makes a cheap
@@ -388,9 +397,18 @@ hoping the line breaks fall the same way.
 For slicing to be safe the flow must sit on a **line grid**:
 
 - Line height is an integer number of pixels (`round(fontSize × 1.6)`); fractional
-  line heights accumulate rounding error down the page and drift off the grid.
+  line heights accumulate rounding error down the page and drift off the grid. Body
+  text is 21px at 100% scale, giving a 34px line.
 - Paragraph spacing is exactly one line, so block boundaries stay on the grid.
 - Page height is rounded *down* to a whole number of lines.
+- **Chapter headings** ("Chapter 1", bold, 1.35em) open each prose chapter inside the
+  flow. The heading's line box is exactly two lines and its margin exactly one, so the
+  block is three whole lines tall and the grid survives it — its font size is then free
+  to be anything that fits inside that box. Because the heading lives at the head of
+  the flow it appears only on a chapter's first page, and it is measured and rendered
+  by the same component, so the measurer cannot disagree with the page.
+- Numbering counts prose chapters only, so an achievement interlude does not consume a
+  chapter number.
 
 With those three in place a slice boundary can never fall through the middle of a line.
 Verified in-browser across all fixture chapters: every line box sits at a single

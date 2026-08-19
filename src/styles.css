@@ -937,6 +937,24 @@ body {
   margin-bottom: 0;
 }
 
+/*
+ * Chapter heading. Its line box is exactly two lines and its margin exactly one, so
+ * the block is three whole lines tall and the flow stays on the grid. The font size
+ * is free to be anything that fits inside that box.
+ */
+.flow__heading {
+  font-size: 1.35em;
+  font-weight: 700;
+  line-height: var(--heading-lh);
+  margin: 0 0 var(--para-gap) 0;
+  text-align: left;
+  letter-spacing: -0.01em;
+  /* Justification is for prose; a heading should never be stretched. */
+  text-align-last: left;
+  hyphens: none;
+  -webkit-hyphens: none;
+}
+
 /* ---- Page turn ----------------------------------------------------------- */
 
 /*
@@ -1045,37 +1063,44 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 6px;
-  padding: 0 8%;
+  padding: 0 6%;
+  /* Spacing between the elements is set by their own margins, not a flex gap, so
+     each interval can differ. --ach-rhythm is the reader's line height. */
+  gap: 0;
 }
 
 .achievement-page__icon {
+  font-size: 2.1em;
   color: var(--tint);
-  margin-bottom: 8px;
+  margin-bottom: calc(var(--ach-rhythm) * 1.3);
 }
 
+/* Eyebrow and title read as one unit, so they sit closer to each other than to
+   their neighbours. */
 .achievement-page__eyebrow {
-  font-size: 11px;
+  font-size: 0.55em;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--label-2);
-  margin: 0;
+  margin: 0 0 calc(var(--ach-rhythm) * 0.45);
 }
 
 .achievement-page__title {
   font-family: var(--font-serif);
-  font-size: 27px;
-  font-weight: 600;
+  font-size: 1.5em;
+  font-weight: 700;
   letter-spacing: 0;
-  margin: 2px 0 0;
+  line-height: 1.2;
+  margin: 0 0 calc(var(--ach-rhythm) * 1.3);
   color: var(--label);
 }
 
+/* Exactly the size of the book's prose, on the same leading. */
 .achievement-page__desc {
   font-family: var(--font-serif);
-  font-size: 16px;
-  line-height: 1.5;
+  font-size: 1em;
+  line-height: var(--ach-rhythm);
   color: var(--label-2);
-  margin: 6px 0 0;
-  max-width: 26em;
+  margin: 0;
+  max-width: 24em;
 }
