@@ -1,6 +1,6 @@
 import { AUDIENCE_PROFILE, type Audience, type Genre, type Setting, type Story } from '../types';
 import { STORIES_KEY } from './keys';
-import { migrate, wrap } from './migrations';
+import { migrateWithMeta, wrap } from './migrations';
 import { readLocal, writeLocal } from './quota';
 
 /**
@@ -14,8 +14,22 @@ const listeners = new Set<() => void>();
 
 function read(): Story[] {
   if (cache) return cache;
-  const stored = migrate<Story[]>(readLocal(STORIES_KEY));
-  cache = Array.isArray(stored) ? stored : [];
+  const { data, upgraded } = migrateWithMeta<Story[]>(readLocal(STORIES_KEY));
+  cache = Array.isArray(data) ? data : [];
+
+  if (upgraded) {
+    // Persist the migrated shape so storage converges on the current schema.
+    // Deliberately not via commit(): read() can run during render (getSnapshot),
+    // and notifying subscribers there would be a state update mid-render. The
+    // data is already what the cache holds, so there is nothing to notify about.
+    try {
+      writeLocal(STORIES_KEY, JSON.stringify(wrap(cache)));
+    } catch (err) {
+      // A full disk is not a reason to fail the read; the in-memory data is correct.
+      console.warn('[storage] could not persist migrated stories', err);
+    }
+  }
+
   return cache;
 }
 
@@ -62,13 +76,13 @@ export function createStory(input: {
     audience: input.audience,
     genre: input.genre,
     setting: input.setting,
-    totalParts: AUDIENCE_PROFILE[input.audience].totalParts,
-    parts: [],
+    totalChapters: AUDIENCE_PROFILE[input.audience].totalChapters,
+    chapters: [],
     achievements: [],
     pendingActions: [],
     summary: '',
     status: 'draft',
-    readingPosition: { partIndex: 0, wordOffset: 0 },
+    readingPosition: { chapterIndex: 0, wordOffset: 0 },
     createdAt: now,
     updatedAt: now,
   };

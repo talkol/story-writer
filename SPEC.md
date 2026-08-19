@@ -19,8 +19,8 @@ browser; no backend.
 | Generation UX | Single streaming call; prose renders as it arrives |
 | Pagination | Measured reflow against the live container |
 | iPad | Two-page spread in landscape, single page in portrait |
-| Story length | Audience-driven: Children 10 parts, Young Adults 20, Adults 30 |
-| Part length | Audience-driven: ~250 / ~500 / ~800 words |
+| Story length | Audience-driven: Children 10 chapters, Young Adults 20, Adults 30 |
+| Chapter length | Audience-driven: ~250 / ~500 / ~800 words |
 | Achievements | The AI decides when one is earned |
 | Genre editing | Editable mid-story from the Read screen; affects future parts only |
 | PDF export | Full book — cover, prose, achievement pages, achievement index |
@@ -65,9 +65,10 @@ devices it targets.
 ## 2. Core concepts and vocabulary
 
 - **Story** — one book. Has a title, cover, genre triple, pages, achievements, summary.
-- **Part** (a.k.a. chapter) — one AI generation. Produces prose, 4 actions, an optional
-  achievement, and a refreshed plot summary. A story is a fixed number of parts.
-- **Page** — one screenful of rendered text. Pages are *derived* from part prose at
+- **Chapter** — one AI generation. Produces prose, 4 actions, an optional achievement,
+  and a refreshed plot summary. A story is a fixed number of chapters. (Called "part"
+  in the first draft of this spec and in schema v1; renamed throughout in v2.)
+- **Page** — one screenful of rendered text. Pages are *derived* from chapter prose at
   render time, not stored as fixed units. An achievement page is a special page.
 - **Action** — a one-sentence plot choice. Choosing one triggers the next part.
 
@@ -88,10 +89,10 @@ interface Achievement {
   id: string;
   title: string;          // 2–3 words
   description: string;    // 1 sentence
-  unlockedAtPart: number;
+  unlockedAtChapter: number;
 }
 
-type Part =
+type Chapter =
   | { kind: 'prose'; index: number; text: string; chosenAction?: string }
   | { kind: 'achievement'; index: number; achievementId: string };
 
@@ -103,16 +104,16 @@ interface Story {
   audience: Audience;
   genre: Genre;
   setting: Setting;
-  totalParts: number;               // 10 | 20 | 30, fixed at creation
-  parts: Part[];
+  totalChapters: number;               // 10 | 20 | 30, fixed at creation
+  chapters: Chapter[];
   achievements: Achievement[];
   pendingActions: string[];         // the 4 choices awaiting the reader; [] when finished
   summary: string;                  // rolling plot summary, ~200 words, AI-maintained
   status: 'draft' | 'reading' | 'finished';
   /** Resume anchor. A page number would break on rotate or font-size change. */
-  readingPosition: { partIndex: number; wordOffset: number };
+  readingPosition: { chapterIndex: number; wordOffset: number };
   /** Set when the genre triple changed mid-story, so the next prompt can bridge it. */
-  genreChangedAtPart?: number;
+  genreChangedAtChapter?: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -145,9 +146,15 @@ Routing: hash routes (`#/library`, `#/settings`, `#/story/:id/genre`, `#/story/:
 
 ### 4.1 Library
 - Title "Library", styled after iOS Books.
-- 2-column grid of covers at 2:3 portrait. Below each: story title, and a "…" button
-  opening a menu with **Export PDF** and **Remove** (Remove confirms first — it is
-  irreversible and there is no cloud copy).
+- 2-column grid of covers at 2:3 portrait. Below each: a chapter-progress caption
+  ("Chapter 3 of 20", "30 chapters" before it starts, "20 chapters · Complete" when
+  finished) and a "…" button opening a menu with **Export PDF** and **Remove**
+  (Remove confirms first — it is irreversible and there is no cloud copy).
+- **Titles are not shown in the grid.** The cover carries the book's identity, as in
+  Apple Books' own grid. The title remains the cover button's accessible name and its
+  pointer tooltip. Note the consequence: AI covers are prompted to contain no
+  lettering (§6.6), so a story with a generated cover shows its title nowhere in the
+  Library — only the placeholder cover renders it.
 - First cell is **Create New**: a dashed-border tile with a "+" and the label.
 - A gear icon in the nav bar opens **Settings**.
 - The "…" menu is a bottom action sheet rather than an anchored popover: no
@@ -156,7 +163,7 @@ Routing: hash routes (`#/library`, `#/settings`, `#/story/:id/genre`, `#/story/:
   the record alone would orphan the image in IndexedDB.
 - Tapping a story opens Read at `lastReadPage`.
 - Empty state: only the Create New tile plus a one-line hint.
-- Unfinished stories show a subtle progress indicator (`Part 4 of 20`).
+
 
 ### 4.2 Genre
 Two modes, same component:
@@ -165,10 +172,12 @@ Two modes, same component:
   Instruction line at the top: *"Choose what kind of story you'd like. This shapes
   the whole book."* A **Confirm** button, disabled until all three are chosen.
   Defaults preselected (Children / Adventure / Fantasy) so Confirm is reachable fast.
-  Audience additionally sets `totalParts` and part length — show that inline:
+  Pills are a `radiogroup`, not a row of toggles, so arrow keys move between options
+  and the group is announced as one choice.
+  Audience additionally sets `totalChapters` and part length — show that inline:
   *"Children — a short book, 10 chapters."*
 - **Edit mode** (from the Read screen) — same pills, prefilled from the story.
-  Audience is editable but does **not** change `totalParts` on an in-progress story
+  Audience is editable but does **not** change `totalChapters` on an in-progress story
   (that would strand the reader mid-arc); show a note saying so. Confirm button reads
   **Save**. Changes apply to future parts only, and the next generation prompt is told
   the story is deliberately shifting so the transition is written, not jarring.
@@ -240,10 +249,10 @@ partial part.
 2. "What happens next?" → Actions screen.
 3. Tap an action → back to Read, generation starts, text streams in.
 4. If the response includes an achievement, append an achievement page after the prose.
-5. Repeat until `parts` reaches `totalParts`.
+5. Repeat until `parts` reaches `totalChapters`.
 
 **Ending**
-- When generating parts `totalParts - 1` and `totalParts`, the prompt is told the story
+- When generating parts `totalChapters - 1` and `totalChapters`, the prompt is told the story
   must converge and resolve. The final part's prompt forbids actions entirely and asks
   for a conclusive ending; the app appends a "The End" page and sets
   `status: 'finished'`.
@@ -293,9 +302,9 @@ Every generation sends:
 3. Audience, genre, setting — plus a flag if they were just changed.
 4. The full achievement list for this story (titles + descriptions), so it doesn't
    repeat one.
-5. `partIndex` / `totalParts`, and target word count for this audience.
+5. `chapterIndex` / `totalChapters`, and target word count for this audience.
 6. The action the reader just chose (absent on part 1).
-7. Pacing signal: `partsSinceLastAchievement`.
+7. Pacing signal: `chaptersSinceLastAchievement`.
 
 ### 6.4 System prompt sketch
 
@@ -330,7 +339,7 @@ After the prose, on its own line, output ===META=== followed by a single JSON ob
 ### 6.5 Achievements
 The model decides, freely, as you chose. Two guardrails that keep it from firing every
 chapter or never firing, without taking the decision away from it:
-- Pass `partsSinceLastAchievement` and instruct: award one only for a genuinely
+- Pass `chaptersSinceLastAchievement` and instruct: award one only for a genuinely
   distinctive turn; typically no more often than every 5 chapters.
 - Client-side rejection: if the model returns an achievement fewer than 3 parts after
   the previous one, drop it and log it. Cheap insurance against runaway pacing.
@@ -426,11 +435,14 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
    3–4 on iPad), genre-derived placeholder covers, bottom action sheet for the "…"
    menu, remove with confirmation that also deletes the cover blob, empty state,
    key entry with a live `GET /v1/models` test, and a no-key redirect from Create New.
-3. **Genre + creation** — both modes, story record creation.
+3. ~~**Genre + creation**~~ — *done.* Pill selectors as accessible radiogroups, both
+   modes, audience hint showing chapter count and part length, chapter count locked on
+   started stories, mid-story shift warning that sets `genreChangedAtChapter`, and real
+   story-record creation wired to Library → Create New.
 4. **Read + pagination** — measured reflow, tap zones, page-turn animation, iPad spread.
    Built against the fixture.
 5. **AI generation** — streaming client, delimited parser, prompt assembly, error paths.
-6. **Choice loop** — Actions screen, continuation, ending logic at `totalParts`.
+6. **Choice loop** — Actions screen, continuation, ending logic at `totalChapters`.
 7. **Achievements** — modal, achievement pages, pacing guard.
 8. **Covers** — image generation, downscale, IndexedDB, placeholder and retry.
 9. **PDF export**.

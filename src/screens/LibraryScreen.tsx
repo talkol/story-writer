@@ -7,7 +7,7 @@ import NavBar, { LargeTitle, NavButton, useScrollRef } from '../components/NavBa
 import { deleteStoryAndCover } from '../storage/library';
 import { hasApiKey } from '../storage/settings';
 import { useStories } from '../storage/useStories';
-import { proseCount, type Story } from '../types';
+import { chapterCount, type Story } from '../types';
 
 type Sheet =
   | { kind: 'menu'; story: Story }
@@ -90,20 +90,20 @@ export default function LibraryScreen() {
                 type="button"
                 className="grid__cover-btn"
                 onClick={() => openStory(story)}
-                aria-label={`Open ${story.title || 'Untitled Story'}`}
+                /* The title is no longer shown in the grid, so it lives on the
+                   accessible name and as a pointer tooltip instead. */
+                aria-label={`Open ${story.title}`}
+                title={story.title}
               >
                 <CoverTile story={story} />
               </button>
 
               <div className="grid__meta">
-                <div className="grid__text">
-                  <span className="grid__title">{story.title || 'Untitled Story'}</span>
-                  <span className="grid__sub">{describe(story)}</span>
-                </div>
+                <span className="grid__sub">{describe(story)}</span>
                 <button
                   type="button"
                   className="grid__more"
-                  aria-label={`More options for ${story.title || 'Untitled Story'}`}
+                  aria-label={`More options for ${story.title}`}
                   onClick={() => setSheet({ kind: 'menu', story })}
                 >
                   <Icon name="dots-three" weight="bold" />
@@ -133,7 +133,7 @@ export default function LibraryScreen() {
 
       {sheet && (
         <ActionSheet
-          title={sheet.kind === 'confirmRemove' ? 'Remove this story?' : sheet.story.title || 'Untitled Story'}
+          title={sheet.kind === 'confirmRemove' ? 'Remove this story?' : sheet.story.title}
           message={
             sheet.kind === 'confirmRemove'
               ? 'This deletes it from this device permanently. There is no cloud copy, and it cannot be undone.'
@@ -148,9 +148,9 @@ export default function LibraryScreen() {
 }
 
 function describe(story: Story): string {
-  if (story.status === 'finished') return `${story.genre} · Complete`;
-  const written = proseCount(story);
-  if (written === 0) return `${story.genre} · Not started`;
-  return `${story.genre} · Part ${written} of ${story.totalParts}`;
+  const written = chapterCount(story);
+  if (story.status === 'finished') return `${story.totalChapters} chapters · Complete`;
+  if (written === 0) return `${story.totalChapters} chapters`;
+  return `Chapter ${written} of ${story.totalChapters}`;
 }
 

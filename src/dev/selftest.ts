@@ -50,9 +50,60 @@ export async function selftest(): Promise<{ passed: number; failed: number; resu
     const legacy = migrate<{ a: number }>(JSON.stringify({ a: 1 }));
     results.push(check('migrate: bare v0 payload adopted', legacy?.a === 1));
 
+    // v1 -> v2: "part" became "chapter". A v1 story must survive intact.
+    const v1Story = {
+      schemaVersion: 1,
+      data: [
+        {
+          id: 'legacy-1',
+          title: 'Old Book',
+          parts: [{ kind: 'prose', index: 0, text: 'once upon a time' }],
+          totalParts: 20,
+          genreChangedAtPart: 4,
+          readingPosition: { partIndex: 2, wordOffset: 55 },
+          achievements: [{ id: 'a1', title: 'First', description: 'x', unlockedAtPart: 3 }],
+          summary: 'a summary',
+        },
+      ],
+    };
+    const up = migrate<Story[]>(JSON.stringify(v1Story))?.[0] as unknown as Record<
+      string,
+      unknown
+    >;
+    const pos = up?.readingPosition as Record<string, unknown> | undefined;
+    const ach = (up?.achievements as Array<Record<string, unknown>> | undefined)?.[0];
+    results.push(
+      check(
+        'migrate v1->v2: parts -> chapters',
+        Array.isArray(up?.chapters) && (up.chapters as unknown[]).length === 1 && !('parts' in up),
+      ),
+    );
+    results.push(
+      check(
+        'migrate v1->v2: totalParts -> totalChapters',
+        up?.totalChapters === 20 && !('totalParts' in up),
+      ),
+    );
+    results.push(
+      check(
+        'migrate v1->v2: reading position anchored',
+        pos?.chapterIndex === 2 && pos?.wordOffset === 55,
+      ),
+    );
+    results.push(check('migrate v1->v2: achievement renamed', ach?.unlockedAtChapter === 3));
+    results.push(
+      check('migrate v1->v2: genre-shift marker renamed', up?.genreChangedAtChapter === 4),
+    );
+    results.push(
+      check(
+        'migrate v1->v2: untouched fields preserved',
+        up?.title === 'Old Book' && up?.summary === 'a summary',
+      ),
+    );
+
     // --- story store ----------------------------------------------------------
     const created = createStory({ audience: 'Children', genre: 'Comedy', setting: 'Space' });
-    results.push(check('createStory: totalParts from audience', created.totalParts === 10));
+    results.push(check('createStory: totalChapters from audience', created.totalChapters === 10));
     results.push(check('createStory: readable back', getStory(created.id)?.id === created.id));
 
     updateStory(created.id, { title: 'Renamed' });

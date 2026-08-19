@@ -34,7 +34,7 @@ export default function AchievementsScreen() {
                   <br />
                   {a.description}
                   <br />
-                  <small>Chapter {a.unlockedAtPart}</small>
+                  <small>Chapter {a.unlockedAtChapter}</small>
                 </li>
               ))}
             </ul>

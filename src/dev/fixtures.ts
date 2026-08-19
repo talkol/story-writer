@@ -95,8 +95,8 @@ export const FIXTURE_STORIES: Story[] = [
     audience: 'Young Adults',
     genre: 'Mystery',
     setting: 'Fantasy',
-    totalParts: 20,
-    parts: [
+    totalChapters: 20,
+    chapters: [
       { kind: 'prose', index: 0, text: LANTERN_P1 },
       {
         kind: 'prose',
@@ -117,7 +117,7 @@ export const FIXTURE_STORIES: Story[] = [
         id: 'ach-refusal',
         title: 'The First Refusal',
         description: 'You turned down a gift that no one has ever turned down before.',
-        unlockedAtPart: 2,
+        unlockedAtChapter: 2,
       },
     ],
     pendingActions: [
@@ -129,7 +129,7 @@ export const FIXTURE_STORIES: Story[] = [
     summary:
       'Mira, a girl in the flooded town of Ashmoor, hears three bells from a tower that has been underwater for sixty years — the old harbour code for an unexpected ship. On the causeway she meets a boy carrying a lantern that burns darkness instead of light. She refuses it; it comes to her anyway, and the world politely refuses to see it. Her aunt Sevrin recognises the lantern: Mira’s grandfather carried it for eleven years and lost his voice setting it down. It cannot be put down safely, only passed on. Sixty years ago he rang three bells and abandoned the light, and the ship he summoned has been circling beyond the charts ever since, waiting.',
     status: 'reading',
-    readingPosition: { partIndex: 3, wordOffset: 0 },
+    readingPosition: { chapterIndex: 3, wordOffset: 0 },
     createdAt: NOW - 72 * HOUR,
     updatedAt: NOW - 2 * HOUR,
   },
@@ -140,8 +140,8 @@ export const FIXTURE_STORIES: Story[] = [
     audience: 'Children',
     genre: 'Adventure',
     setting: 'Nature',
-    totalParts: 10,
-    parts: [
+    totalChapters: 10,
+    chapters: [
       {
         kind: 'prose',
         index: 0,
@@ -158,24 +158,24 @@ export const FIXTURE_STORIES: Story[] = [
     summary:
       'Biscuit, a small rabbit with one floppy ear, wants a golden apple at the top of a great oak tree that nobody can reach. The crows mock him. He claims to have a ladder, which he does not.',
     status: 'reading',
-    readingPosition: { partIndex: 0, wordOffset: 0 },
+    readingPosition: { chapterIndex: 0, wordOffset: 0 },
     createdAt: NOW - 200 * HOUR,
     updatedAt: NOW - 40 * HOUR,
   },
   {
-    id: 'fixture-empty',
-    title: '',
+    id: 'fixture-unstarted',
+    title: 'Nine Grams of Nothing',
     coverImageId: null,
     audience: 'Adults',
     genre: 'Crime',
     setting: 'Urban',
-    totalParts: 30,
-    parts: [],
+    totalChapters: 30,
+    chapters: [],
     achievements: [],
     pendingActions: [],
     summary: '',
     status: 'draft',
-    readingPosition: { partIndex: 0, wordOffset: 0 },
+    readingPosition: { chapterIndex: 0, wordOffset: 0 },
     createdAt: NOW - HOUR,
     updatedAt: NOW - HOUR,
   },

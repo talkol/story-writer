@@ -16,11 +16,11 @@ are [Phosphor](https://phosphoricons.com), self-hosted as a WOFF2. See
 
 See [SPEC.md](SPEC.md) for the full product and technical spec.
 
-> **Status: milestone 2 of 10.** The scaffold, storage layer, Library, and Settings
-> are done. Genre, Read, Actions, and Achievements are still stubs, and story
-> generation does not exist yet — creating a real story is not yet possible. Export
-> PDF appears in the "…" menu but is disabled. See [SPEC.md §10](SPEC.md) for the
-> milestone list.
+> **Status: milestone 3 of 10.** The scaffold, storage layer, Library, Settings, and
+> Genre are done — you can create a real story and it persists. Read, Actions, and
+> Achievements are still stubs, and story *generation* does not exist yet, so a new
+> story has no chapters until milestone 5. Export PDF appears in the "…" menu but is
+> disabled. See [SPEC.md §10](SPEC.md) for the milestone list.
 
 ---
 
@@ -48,8 +48,8 @@ the fastest way to check the reader on a real device, and it is worth doing ofte
 
 ### Dev-only tooling
 
-Development builds seed three fixture stories on first load (a 4-part YA mystery with
-an achievement, a children's book, and an untitled draft) so the UI can be built and
+Development builds seed three fixture stories on first load (a 4-chapter YA mystery
+with an achievement, a children's book, and an unstarted draft) so the UI can be built and
 reviewed before the AI client exists. Two get generated cover blobs, so the
 IndexedDB→object-URL path is exercised; the third stays coverless so the placeholder
 cover stays visible. Helpers are on `window.__dev`:
@@ -108,6 +108,9 @@ src/
 - `migrations.ts` wraps persisted data in a `{ schemaVersion, data }` envelope. When
   you change a stored shape, bump `SCHEMA_VERSION` in `keys.ts` **and** add the
   matching migration — a version bump without one will silently discard user data.
+  Migrated data is written back on first read, so storage converges on the current
+  schema rather than being re-migrated forever. Schema v2 renamed "part" to
+  "chapter" throughout; `MIGRATIONS[1]` is a worked example.
 - `quota.ts` normalises `QuotaExceededError` across browsers into a `StorageFullError`
   with a message worth showing a user.
 - `covers.idb.ts` keeps cover images in IndexedDB as Blobs, downscaled to 512×768

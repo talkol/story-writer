@@ -36,26 +36,26 @@ export type Setting = (typeof SETTINGS)[number];
  */
 export const AUDIENCE_PROFILE: Record<
   Audience,
-  { totalParts: number; wordsPerPart: number; label: string }
+  { totalChapters: number; wordsPerChapter: number; label: string }
 > = {
-  Children: { totalParts: 10, wordsPerPart: 250, label: 'a short book, 10 chapters' },
-  'Young Adults': { totalParts: 20, wordsPerPart: 500, label: 'a full book, 20 chapters' },
-  Adults: { totalParts: 30, wordsPerPart: 800, label: 'a long book, 30 chapters' },
+  Children: { totalChapters: 10, wordsPerChapter: 250, label: 'a short book, 10 chapters' },
+  'Young Adults': { totalChapters: 20, wordsPerChapter: 500, label: 'a full book, 20 chapters' },
+  Adults: { totalChapters: 30, wordsPerChapter: 800, label: 'a long book, 30 chapters' },
 };
 
 export interface Achievement {
   id: string;
   title: string;
   description: string;
-  unlockedAtPart: number;
+  unlockedAtChapter: number;
 }
 
-export type Part =
+export type Chapter =
   | {
       kind: 'prose';
       index: number;
       text: string;
-      /** The action the reader chose that led into this part. Absent on part 1. */
+      /** The action the reader chose that led into this chapter. Absent on chapter 1. */
       chosenAction?: string;
       /** True when the stream ended before the metadata block arrived. */
       metaMissing?: boolean;
@@ -66,7 +66,7 @@ export type StoryStatus = 'draft' | 'reading' | 'finished';
 
 /** Resume anchor. A page number would break on rotate or font change. */
 export interface ReadingPosition {
-  partIndex: number;
+  chapterIndex: number;
   wordOffset: number;
 }
 
@@ -77,8 +77,8 @@ export interface Story {
   audience: Audience;
   genre: Genre;
   setting: Setting;
-  totalParts: number;
-  parts: Part[];
+  totalChapters: number;
+  chapters: Chapter[];
   achievements: Achievement[];
   /** The 4 choices awaiting the reader. Empty when generating or finished. */
   pendingActions: string[];
@@ -87,7 +87,7 @@ export interface Story {
   status: StoryStatus;
   readingPosition: ReadingPosition;
   /** Set when the genre triple changed mid-story, so the next prompt can bridge it. */
-  genreChangedAtPart?: number;
+  genreChangedAtChapter?: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -100,11 +100,11 @@ export interface Settings {
   fontScale: FontScale;
 }
 
-/** Number of prose parts written so far, ignoring achievement pages. */
-export function proseCount(story: Story): number {
-  return story.parts.filter((p) => p.kind === 'prose').length;
+/** Number of prose chapters written so far, ignoring achievement pages. */
+export function chapterCount(story: Story): number {
+  return story.chapters.filter((c) => c.kind === 'prose').length;
 }
 
-export function isFinalPart(story: Story, partNumber: number): boolean {
-  return partNumber >= story.totalParts;
+export function isFinalChapter(story: Story, chapterNumber: number): boolean {
+  return chapterNumber >= story.totalChapters;
 }

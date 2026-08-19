@@ -270,35 +270,17 @@ body {
 
 .grid__meta {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 2px;
-  margin-top: 9px;
-}
-
-.grid__text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-/* iOS subheadline / caption pairing, as under a Books cover. */
-.grid__title {
-  font-size: 13px;
-  line-height: 1.3;
-  letter-spacing: -0.008em;
-  color: var(--label);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  margin-top: 7px;
 }
 
 .grid__sub {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 12px;
   line-height: 1.33;
   color: var(--label-2);
-  margin-top: 1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -312,7 +294,7 @@ body {
   cursor: pointer;
   width: 28px;
   height: 28px;
-  margin: -3px -6px 0 0;
+  margin: 0 -6px 0 0;
   border-radius: 14px;
   flex: 0 0 auto;
   display: flex;
@@ -754,4 +736,108 @@ body {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ---- Genre screen ------------------------------------------------------- */
+
+.genre {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 0 var(--gutter) 24px;
+}
+
+.genre__intro {
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--label-2);
+  margin: 0 4px 24px;
+}
+
+.pillgroup {
+  margin-bottom: 26px;
+}
+
+.pillgroup__label {
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.006em;
+  text-transform: uppercase;
+  color: var(--label-2);
+  margin: 0 0 10px 4px;
+}
+
+.pillgroup__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  appearance: none;
+  font: inherit;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  padding: 9px 15px;
+  min-height: 38px;
+  border: 0;
+  border-radius: 19px;
+  background: var(--fill-quaternary);
+  color: var(--label);
+  cursor: pointer;
+  transition:
+    background-color 130ms ease,
+    color 130ms ease;
+}
+.pill:active {
+  opacity: 0.6;
+}
+.pill:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 2px;
+}
+.pill--selected {
+  background: var(--tint);
+  color: #fff;
+  font-weight: 500;
+}
+
+.pillgroup__hint {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--label-2);
+  margin: 10px 4px 0;
+}
+
+.genre__warning {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--label);
+  background: var(--tint-pressed);
+  border-radius: var(--radius);
+  padding: 11px 13px;
+  margin: 4px 0 0;
+}
+
+/* ---- Screen footer ------------------------------------------------------ */
+
+/* Sits outside .screen so it never scrolls, the way a UIKit toolbar behaves. */
+.footer {
+  flex: 0 0 auto;
+  padding: 10px var(--gutter);
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 0.5px solid var(--separator);
+}
+
+.footer > .btn--block {
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.btn--block {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  font-size: 17px;
+  font-weight: 600;
 }
