@@ -195,9 +195,17 @@ Two modes, same component:
   toggles the nav chrome (so the reader can go fullscreen).
 - Also support horizontal swipe, and Left/Right arrow keys for desktop testing.
 - **Page-turn animation**: CSS 3D transform, `rotateY` on the outgoing page around its
-  spine edge with `transform-style: preserve-3d`, plus a shadow gradient that sweeps
-  across the incoming page. ~350 ms, `ease-in-out`. Direction mirrors travel direction.
-  Respect `prefers-reduced-motion` with a cross-fade fallback.
+  spine edge with `transform-style: preserve-3d`, plus a drop shadow along the hinge.
+  380 ms. Respects `prefers-reduced-motion` with a cross-fade fallback.
+  - **Page margins belong to the page, not to the stage.** The page element is the
+    whole physical page — margins included — so the turning leaf carries them with it.
+    With the margins on the stage instead, only the bare block of text rotated and the
+    turn read as a floating rectangle.
+  - The hinge is the **spine side**, which differs per column. Single page: left edge
+    going forward, right edge going back. In a spread the spine is the inner edge, so
+    the left page hinges on its right edge and the right page on its left, the way a
+    real book opens. Rotation runs to 105°, past the point where the hidden backface
+    takes the leaf out of view.
 - Nav bar: **trophy icon** → Achievements modal; **book/tag icon** → Genre in edit mode.
   A page indicator (`12 / 47`) sits at the bottom.
 - Reaching the last generated page when actions are pending shows a "What happens next?"

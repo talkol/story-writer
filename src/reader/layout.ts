@@ -15,13 +15,26 @@ import type { FontScale } from '../types';
 const BASE_FONT_SIZE = 19;
 const LINE_RATIO = 1.6;
 
+/**
+ * Page margins live on the page itself, not on the stage around it. That makes the
+ * page element the whole physical page, so the turning leaf carries its margins with
+ * it instead of animating a bare block of text.
+ */
+const PAGE_PAD_X = 22;
+const PAGE_PAD_Y = 10;
+
 export interface ReaderMetrics {
   fontSize: number;
   lineHeight: number;
-  /** Height of one page, always a whole multiple of lineHeight. */
+  /** Height of the text area, always a whole multiple of lineHeight. */
   pageHeight: number;
-  /** Width of a single page column (half the stage, minus the gutter, on a spread). */
+  /** Width of the text area within a page. */
   columnWidth: number;
+  /** Outer size of the whole page, margins included — the box the leaf animates. */
+  pageBoxWidth: number;
+  pageBoxHeight: number;
+  padX: number;
+  padY: number;
   /** 1 on phones and in portrait, 2 for the iPad landscape spread. */
   columns: number;
 }
@@ -40,13 +53,29 @@ export function computeMetrics(
   const lineHeight = Math.round(fontSize * LINE_RATIO);
 
   const columns = spread ? 2 : 1;
-  const gutter = spread ? 48 : 0;
-  const columnWidth = Math.floor((stageWidth - gutter) / columns);
+  const gutter = spread ? 40 : 0;
 
-  const lines = Math.max(1, Math.floor(stageHeight / lineHeight));
+  const pageBoxWidth = Math.floor((stageWidth - gutter) / columns);
+  const columnWidth = pageBoxWidth - PAGE_PAD_X * 2;
+
+  const lines = Math.max(1, Math.floor((stageHeight - PAGE_PAD_Y * 2) / lineHeight));
   const pageHeight = lines * lineHeight;
+  const pageBoxHeight = pageHeight + PAGE_PAD_Y * 2;
 
-  return { fontSize, lineHeight, pageHeight, columnWidth, columns };
+  // Too narrow to typeset — the caller renders nothing rather than garbage.
+  if (columnWidth < 120) return null;
+
+  return {
+    fontSize,
+    lineHeight,
+    pageHeight,
+    columnWidth,
+    pageBoxWidth,
+    pageBoxHeight,
+    padX: PAGE_PAD_X,
+    padY: PAGE_PAD_Y,
+    columns,
+  };
 }
 
 /**

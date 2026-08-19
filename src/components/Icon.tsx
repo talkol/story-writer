@@ -6,16 +6,13 @@
 export type IconName =
   | 'gear'
   | 'trophy'
-  | 'book-open'
-  | 'books'
+  | 'sliders-horizontal'
   | 'caret-left'
-  | 'caret-right'
   | 'plus'
   | 'dots-three'
   | 'x'
   | 'export'
-  | 'trash'
-  | 'check';
+  | 'trash';
 
 interface Props {
   name: IconName;

@@ -169,10 +169,10 @@ export default function ReadScreen() {
                 <Icon name="trophy" size={21} />
               </NavButton>
               <NavButton
-                label="Story settings"
+                label="Genre and setting"
                 onClick={() => navigate(`/story/${story.id}/genre`)}
               >
-                <Icon name="book-open" size={21} />
+                <Icon name="sliders-horizontal" size={21} />
               </NavButton>
             </>
           }
@@ -209,7 +209,7 @@ export default function ReadScreen() {
                     <Page story={story} pages={pages} index={index} metrics={metrics} />
                     {turn && (
                       <div
-                        className={`leaf leaf--${turn.direction}`}
+                        className={`leaf leaf--${spineSide(metrics.columns, column, turn.direction)}`}
                         style={{ animationDuration: `${TURN_MS}ms` }}
                       >
                         <Page
@@ -280,11 +280,23 @@ function Page({
 }) {
   if (!metrics) return null;
   const ref = pages[index];
-  if (!ref) return <div className="page page--blank" />;
+  if (!ref)
+    return (
+      <div
+        className="page page--blank"
+        style={{ width: metrics.pageBoxWidth, height: metrics.pageBoxHeight }}
+      />
+    );
+
+  const box = {
+    width: metrics.pageBoxWidth,
+    height: metrics.pageBoxHeight,
+    padding: `${metrics.padY}px ${metrics.padX}px`,
+  };
 
   if (ref.kind === 'achievement') {
     return (
-      <div className="page" style={{ width: metrics.columnWidth, height: metrics.pageHeight }}>
+      <div className="page" style={box}>
         <AchievementPage
           achievement={story.achievements.find((a) => a.id === ref.achievementId)}
         />
@@ -293,14 +305,13 @@ function Page({
   }
 
   const chapter = story.chapters[ref.chapterIndex];
-  if (chapter?.kind !== 'prose') return <div className="page page--blank" />;
+  if (chapter?.kind !== 'prose') return <div className="page page--blank" style={box} />;
 
   return (
-    <div
-      className="page"
-      style={{ width: metrics.columnWidth, height: metrics.pageHeight }}
-    >
-      <ChapterFlow text={chapter.text} metrics={metrics} sliceIndex={ref.sliceIndex} />
+    <div className="page" style={box}>
+      <div className="page__clip" style={{ height: metrics.pageHeight }}>
+        <ChapterFlow text={chapter.text} metrics={metrics} sliceIndex={ref.sliceIndex} />
+      </div>
     </div>
   );
 }
@@ -312,6 +323,21 @@ function countProseChaptersTo(story: Story, chapterIndex: number): number {
     if (story.chapters[i].kind === 'prose') n++;
   }
   return Math.max(1, n);
+}
+
+/**
+ * Which edge the leaf pivots on. In a single-page view the spine is always the left
+ * edge going forward and the right edge going back. In a spread the spine is the
+ * inner edge, so the left-hand page pivots on its right edge and the right-hand page
+ * on its left — the same way a real book opens.
+ */
+function spineSide(
+  columns: number,
+  column: number,
+  direction: 'forward' | 'back',
+): 'left' | 'right' {
+  if (columns === 1) return direction === 'forward' ? 'left' : 'right';
+  return column === 0 ? 'right' : 'left';
 }
 
 /** Keeps the spread aligned so a two-up view always starts on an even page. */

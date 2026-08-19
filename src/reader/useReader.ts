@@ -49,6 +49,8 @@ function sameMetrics(a: ReaderMetrics | null, b: ReaderMetrics | null): boolean 
     a.lineHeight === b.lineHeight &&
     a.pageHeight === b.pageHeight &&
     a.columnWidth === b.columnWidth &&
+    a.pageBoxWidth === b.pageBoxWidth &&
+    a.pageBoxHeight === b.pageBoxHeight &&
     a.columns === b.columns
   );
 }

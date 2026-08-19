@@ -868,7 +868,7 @@ body {
   min-height: 0;
   position: relative;
   display: flex;
-  padding: 10px 22px 6px;
+  padding: 0;
   overflow: hidden;
   /* The reader is a paged surface: no scrolling, no rubber-banding. */
   touch-action: pan-y;
@@ -887,7 +887,7 @@ body {
 
 .spread {
   display: flex;
-  gap: 48px;
+  gap: 40px;
   /* Perspective makes the leaf rotation read as a page lifting off the book. */
   perspective: 2000px;
 }
@@ -901,9 +901,15 @@ body {
 }
 
 .page {
-  overflow: hidden;
   position: relative;
   background: var(--bg);
+  overflow: hidden;
+}
+
+/* Clips the flow to the text area; the page's own margins sit outside this box. */
+.page__clip {
+  overflow: hidden;
+  position: relative;
 }
 
 .page--blank {
@@ -949,39 +955,40 @@ body {
   animation-fill-mode: forwards;
 }
 
-.leaf--forward {
+.leaf--left {
   transform-origin: left center;
-  animation-name: leaf-forward;
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.18);
+  animation-name: leaf-hinge-left;
+  box-shadow: 3px 0 18px rgba(0, 0, 0, 0.2);
 }
 
-.leaf--back {
+.leaf--right {
   transform-origin: right center;
-  animation-name: leaf-back;
-  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.18);
+  animation-name: leaf-hinge-right;
+  box-shadow: -3px 0 18px rgba(0, 0, 0, 0.2);
 }
 
-@keyframes leaf-forward {
+@keyframes leaf-hinge-left {
   from {
     transform: rotateY(0deg);
   }
   to {
-    transform: rotateY(-100deg);
+    /* Past 90° so the hidden backface has fully taken the leaf out of view. */
+    transform: rotateY(-105deg);
   }
 }
 
-@keyframes leaf-back {
+@keyframes leaf-hinge-right {
   from {
     transform: rotateY(0deg);
   }
   to {
-    transform: rotateY(100deg);
+    transform: rotateY(105deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .leaf--forward,
-  .leaf--back {
+  .leaf--left,
+  .leaf--right {
     transform-origin: center;
     animation-name: leaf-fade;
     box-shadow: none;

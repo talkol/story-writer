@@ -50,13 +50,10 @@
 
 .ph-gear:before { content: '\e270'; }
 .ph-trophy:before { content: '\e67e'; }
-.ph-book-open:before { content: '\e0e6'; }
-.ph-books:before { content: '\e758'; }
+.ph-sliders-horizontal:before { content: '\e434'; }
 .ph-caret-left:before { content: '\e138'; }
-.ph-caret-right:before { content: '\e13a'; }
 .ph-plus:before { content: '\e3d4'; }
 .ph-dots-three:before { content: '\e1fe'; }
 .ph-x:before { content: '\e4f6'; }
 .ph-export:before { content: '\eaf0'; }
 .ph-trash:before { content: '\e4a6'; }
-.ph-check:before { content: '\e182'; }
