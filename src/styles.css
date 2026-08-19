@@ -754,7 +754,10 @@ body {
 }
 
 .pillgroup {
-  margin-bottom: 26px;
+  /* Leading space separates each group from what precedes it, so Audience, Genre and
+     Setting read as three distinct choices rather than one long list. */
+  padding-top: 22px;
+  margin-bottom: 24px;
 }
 
 .pillgroup__label {
