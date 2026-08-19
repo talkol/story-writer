@@ -115,6 +115,10 @@ Routing: hash routes (`#/library`, `#/settings`, `#/story/:id/genre`, `#/story/:
   irreversible and there is no cloud copy).
 - First cell is **Create New**: a dashed-border tile with a "+" and the label.
 - A gear icon in the nav bar opens **Settings**.
+- The "…" menu is a bottom action sheet rather than an anchored popover: no
+  positioning math, large touch targets, identical behaviour on phone and iPad.
+- Remove asks for confirmation, then deletes the story *and* its cover blob. Deleting
+  the record alone would orphan the image in IndexedDB.
 - Tapping a story opens Read at `lastReadPage`.
 - Empty state: only the Create New tile plus a one-line hint.
 - Unfinished stories show a subtle progress indicator (`Part 4 of 20`).
@@ -383,7 +387,10 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
    handling, IndexedDB cover store with canvas downscale, three fixture stories,
    working Settings screen, and a 20-assertion storage smoke test at
    `window.__dev.selftest()`.
-2. **Library + Settings** — grid, "…" menu, remove, key entry and test.
+2. ~~**Library + Settings**~~ — *done.* Responsive cover grid (2 columns on phone,
+   3–4 on iPad), genre-derived placeholder covers, bottom action sheet for the "…"
+   menu, remove with confirmation that also deletes the cover blob, empty state,
+   key entry with a live `GET /v1/models` test, and a no-key redirect from Create New.
 3. **Genre + creation** — both modes, story record creation.
 4. **Read + pagination** — measured reflow, tap zones, page-turn animation, iPad spread.
    Built against the fixture.

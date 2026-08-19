@@ -1,25 +1,61 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { testApiKey } from '../ai/client';
+import ActionSheet from '../components/ActionSheet';
 import NavBar, { NavButton } from '../components/NavBar';
+import { StorageFullError } from '../storage/quota';
 import { loadSettings, saveSettings } from '../storage/settings';
 import { replaceAll } from '../storage/stories';
-import { StorageFullError } from '../storage/quota';
 import { FONT_SCALES, type FontScale } from '../types';
+
+type Status = { tone: 'ok' | 'error' | 'info'; text: string } | null;
 
 export default function SettingsScreen() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // Set when the user was sent here from Create New without a key.
+  const next = params.get('next');
+
   const [settings, setSettings] = useState(loadSettings);
   const [keyInput, setKeyInput] = useState(settings.apiKey ?? '');
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<Status>(null);
+  const [testing, setTesting] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
-  function persist(next: typeof settings) {
+  const dirty = keyInput.trim() !== (settings.apiKey ?? '');
+
+  function persist(patch: Partial<typeof settings>): boolean {
+    const merged = { ...settings, ...patch };
     try {
-      saveSettings(next);
-      setSettings(next);
-      setStatus('Saved.');
+      saveSettings(merged);
+      setSettings(merged);
+      return true;
     } catch (err) {
-      setStatus(err instanceof StorageFullError ? err.message : 'Could not save.');
+      setStatus({
+        tone: 'error',
+        text: err instanceof StorageFullError ? err.message : 'Could not save settings.',
+      });
+      return false;
     }
+  }
+
+  function saveKey() {
+    if (!persist({ apiKey: keyInput.trim() || null })) return;
+    setStatus({ tone: 'ok', text: keyInput.trim() ? 'Key saved.' : 'Key removed.' });
+    if (next && keyInput.trim()) navigate(next, { replace: true });
+  }
+
+  async function runTest() {
+    setTesting(true);
+    setStatus({ tone: 'info', text: 'Checking…' });
+    const result = await testApiKey(keyInput);
+    setStatus({ tone: result.ok ? 'ok' : 'error', text: result.message });
+    setTesting(false);
+  }
+
+  function applyFontScale(scale: FontScale) {
+    if (!persist({ fontScale: scale })) return;
+    document.documentElement.style.setProperty('--font-scale', String(scale));
   }
 
   return (
@@ -27,80 +63,120 @@ export default function SettingsScreen() {
       <NavBar
         title="Settings"
         left={
-          <NavButton label="Back" onClick={() => navigate(-1)}>
+          <NavButton label="Back" onClick={() => (next ? navigate('/library') : navigate(-1))}>
             ‹ Back
           </NavButton>
         }
       />
+
       <div className="screen">
-        <div className="stub">
-          <h2>OpenAI API key</h2>
-          <input
-            type="password"
-            className="field"
-            value={keyInput}
-            placeholder="sk-…"
-            autoComplete="off"
-            spellCheck={false}
-            onChange={(e) => setKeyInput(e.target.value)}
-          />
-          <p>
-            <button
-              type="button"
-              className="nav__btn"
-              onClick={() => persist({ ...settings, apiKey: keyInput.trim() || null })}
-            >
-              Save key
-            </button>
-            <button type="button" className="nav__btn" disabled title="Lands with the AI client">
-              Test key
-            </button>
-          </p>
-          <p>
-            This key is stored in this browser’s local storage and is sent only to
-            <code>api.openai.com</code>. Anyone with access to this device or browser
-            profile can read it. Use a dedicated key with a spend limit.
-          </p>
+        <div className="settings">
+          {next && (
+            <p className="settings__banner">
+              A story is written by OpenAI, so the app needs your API key before it can
+              create one. Add it below and you’ll be taken straight back.
+            </p>
+          )}
 
-          <h2>Reading</h2>
-          <p>
-            {FONT_SCALES.map((scale) => (
-              <button
-                key={scale}
-                type="button"
-                className="nav__btn"
-                aria-pressed={settings.fontScale === scale}
-                style={{
-                  fontWeight: settings.fontScale === scale ? 700 : 400,
-                  textDecoration: settings.fontScale === scale ? 'underline' : 'none',
-                }}
-                onClick={() => persist({ ...settings, fontScale: scale as FontScale })}
-              >
-                {Math.round(scale * 100)}%
-              </button>
-            ))}
-          </p>
-
-          <h2>Data</h2>
-          <p>
-            <button
-              type="button"
-              className="nav__btn"
-              style={{ color: 'var(--danger)' }}
-              onClick={() => {
-                if (confirm('Delete every story on this device? This cannot be undone.')) {
-                  replaceAll([]);
-                  setStatus('All stories removed.');
-                }
+          <section className="settings__section">
+            <h2 className="settings__heading">OpenAI API key</h2>
+            <input
+              type="password"
+              className="field"
+              value={keyInput}
+              placeholder="sk-…"
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              onChange={(e) => {
+                setKeyInput(e.target.value);
+                setStatus(null);
               }}
+            />
+            <div className="settings__row">
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={saveKey}
+                disabled={!dirty}
+              >
+                {dirty ? 'Save key' : 'Saved'}
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={runTest}
+                disabled={testing || !keyInput.trim()}
+              >
+                {testing ? 'Checking…' : 'Test key'}
+              </button>
+            </div>
+
+            {status && (
+              <p className={`settings__status settings__status--${status.tone}`} role="status">
+                {status.text}
+              </p>
+            )}
+
+            <p className="settings__note">
+              Stored in this browser’s local storage and sent only to{' '}
+              <code>api.openai.com</code>. Anyone with access to this device or browser
+              profile can read it — use a dedicated key with a spend limit.
+            </p>
+          </section>
+
+          <section className="settings__section">
+            <h2 className="settings__heading">Reading</h2>
+            <div className="settings__row" role="group" aria-label="Text size">
+              {FONT_SCALES.map((scale) => (
+                <button
+                  key={scale}
+                  type="button"
+                  className={`btn${settings.fontScale === scale ? ' btn--selected' : ''}`}
+                  aria-pressed={settings.fontScale === scale}
+                  onClick={() => applyFontScale(scale)}
+                >
+                  {Math.round(scale * 100)}%
+                </button>
+              ))}
+            </div>
+            <p className="settings__note">Applies to the reader. Pages re-flow to fit.</p>
+          </section>
+
+          <section className="settings__section">
+            <h2 className="settings__heading">Data</h2>
+            <button
+              type="button"
+              className="btn btn--danger"
+              onClick={() => setConfirmClear(true)}
             >
               Clear all data
             </button>
-          </p>
-
-          {status && <p role="status">{status}</p>}
+            <p className="settings__note">
+              Stories live only on this device. Export anything you want to keep first.
+            </p>
+          </section>
         </div>
       </div>
+
+      {confirmClear && (
+        <ActionSheet
+          title="Delete every story?"
+          message="This removes all stories on this device permanently. It cannot be undone."
+          items={[
+            {
+              label: 'Delete everything',
+              destructive: true,
+              onSelect: () => {
+                replaceAll([]);
+                setConfirmClear(false);
+                setStatus({ tone: 'ok', text: 'All stories removed.' });
+              },
+            },
+          ]}
+          onClose={() => setConfirmClear(false)}
+        />
+      )}
     </>
   );
 }

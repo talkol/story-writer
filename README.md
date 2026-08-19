@@ -10,10 +10,11 @@ your own OpenAI API key.
 
 See [SPEC.md](SPEC.md) for the full product and technical spec.
 
-> **Status: milestone 1 of 10.** The scaffold, routing, and storage layer are done and
-> tested. Most screens are stubs, and the AI client does not exist yet — creating a
-> real story is not yet possible. The Settings screen is fully working. See
-> [SPEC.md §10](SPEC.md) for the milestone list.
+> **Status: milestone 2 of 10.** The scaffold, storage layer, Library, and Settings
+> are done. Genre, Read, Actions, and Achievements are still stubs, and story
+> generation does not exist yet — creating a real story is not yet possible. Export
+> PDF appears in the "…" menu but is disabled. See [SPEC.md §10](SPEC.md) for the
+> milestone list.
 
 ---
 
@@ -42,8 +43,10 @@ the fastest way to check the reader on a real device, and it is worth doing ofte
 ### Dev-only tooling
 
 Development builds seed three fixture stories on first load (a 4-part YA mystery with
-an achievement, a children's book, and an empty draft) so the UI can be built and
-reviewed before the AI client exists. They are exposed on `window.__dev`:
+an achievement, a children's book, and an untitled draft) so the UI can be built and
+reviewed before the AI client exists. Two get generated cover blobs, so the
+IndexedDB→object-URL path is exercised; the third stays coverless so the placeholder
+cover stays visible. Helpers are on `window.__dev`:
 
 | Call | What it does |
 |---|---|
