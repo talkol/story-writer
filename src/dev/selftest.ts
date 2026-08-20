@@ -1,6 +1,7 @@
 import { applyChapter } from '../ai/generate';
 import { displayableProse, MetaFormatError, parseMeta, splitOnDelimiter } from '../ai/parse';
 import { buildContext, buildSystemPrompt, buildUserPrompt } from '../ai/prompts';
+import { buildPages } from '../reader/pages';
 import { deleteCover, getCover, normalizeCover, putCover } from '../storage/covers.idb';
 import { migrate, wrap } from '../storage/migrations';
 import { loadSettings, saveSettings } from '../storage/settings';
@@ -326,6 +327,79 @@ export async function selftest(): Promise<{ passed: number; failed: number; resu
     );
 
     removeStory(promptStory.id);
+
+    // --- AI: the choice loop and the ending ------------------------------------
+    const loopStory = createStory({ audience: 'Children', genre: 'Drama', setting: 'Urban' });
+
+    applyChapter(loopStory, {
+      prose: 'Chapter one.',
+      meta: { title: 'A Book', actions: ['w', 'x', 'y', 'z'], achievement: null, summary: 's1' },
+      metaMissing: false,
+    });
+    applyChapter(getStory(loopStory.id)!, {
+      prose: 'Chapter two.',
+      meta: { actions: ['w', 'x', 'y', 'z'], achievement: null, summary: 's2' },
+      metaMissing: false,
+      chosenAction: 'Open the gate.',
+    });
+    const looped = getStory(loopStory.id)!;
+    const secondChapter = looped.chapters[1];
+    results.push(
+      check(
+        'loop: the chosen action is recorded on the chapter it produced',
+        secondChapter?.kind === 'prose' && secondChapter.chosenAction === 'Open the gate.',
+      ),
+    );
+    results.push(
+      check(
+        'loop: chapter one carries no chosen action',
+        looped.chapters[0].kind === 'prose' && looped.chapters[0].chosenAction === undefined,
+      ),
+    );
+
+    // Fast-forward to the last chapter of a 10-chapter book.
+    updateStory(loopStory.id, (cur) => ({
+      chapters: Array.from({ length: 9 }, (_, i) => ({
+        kind: 'prose' as const,
+        index: i,
+        text: `Chapter ${i + 1}.`,
+      })),
+      pendingActions: ['a', 'b', 'c', 'd'],
+      status: 'reading' as const,
+      totalChapters: cur.totalChapters,
+    }));
+
+    applyChapter(getStory(loopStory.id)!, {
+      prose: 'And so it ended.',
+      // Even if the model offers choices, the final chapter must not carry any.
+      meta: { actions: ['a', 'b', 'c', 'd'], achievement: null, summary: 'done' },
+      metaMissing: false,
+      chosenAction: 'Walk into the light.',
+    });
+    const finished = getStory(loopStory.id)!;
+    results.push(
+      check(
+        'ending: final chapter finishes the story and clears the choices',
+        finished.status === 'finished' && finished.pendingActions.length === 0,
+        `status=${finished.status}, actions=${finished.pendingActions.length}`,
+      ),
+    );
+
+    const finishedPages = buildPages(finished, finished.chapters.map(() => 1));
+    results.push(
+      check(
+        'ending: a finished book gains a closing page',
+        finishedPages.at(-1)?.kind === 'end',
+      ),
+    );
+    results.push(
+      check(
+        'ending: an unfinished book has no closing page',
+        !buildPages(looped, looped.chapters.map(() => 1)).some((p) => p.kind === 'end'),
+      ),
+    );
+
+    removeStory(loopStory.id);
 
     // --- covers (IndexedDB + canvas downscale) --------------------------------
     const canvas = document.createElement('canvas');

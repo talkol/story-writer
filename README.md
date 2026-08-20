@@ -16,12 +16,11 @@ are [Phosphor](https://phosphoricons.com), self-hosted as a WOFF2. See
 
 See [SPEC.md](SPEC.md) for the full product and technical spec.
 
-> **Status: milestone 5 of 10.** Creating a story now writes chapter one with the
-> OpenAI API, streaming into the reader as it arrives. Add a key in Settings first.
-> The *choice loop* is not wired yet (milestone 6), so the four options a chapter
-> produces are stored but the Actions screen is still a stub — a story stops after
-> chapter one. Achievements screen is a stub and Export PDF is disabled. See
-> [SPEC.md §10](SPEC.md) for the milestone list.
+> **Status: milestone 6 of 10.** The app is playable end to end: create a story, read
+> chapter one as it streams in, choose what happens next, and carry on to the ending.
+> Add an OpenAI key in Settings first. Still to come: the Achievements modal is a stub,
+> covers are placeholders, and Export PDF is disabled. See [SPEC.md §10](SPEC.md) for
+> the milestone list.
 
 ---
 
@@ -59,7 +58,7 @@ cover stays visible. Helpers are on `window.__dev`:
 |---|---|
 | `__dev.seedFixtures()` | Replace the library with the fixtures |
 | `__dev.clearStories()` | Empty the library |
-| `__dev.selftest()` | Run the 46-assertion storage and AI smoke test |
+| `__dev.selftest()` | Run the 51-assertion storage and AI smoke test |
 | `__dev.mockOpenAI(mode)` | Serve a canned OpenAI stream instead of the network |
 | `__dev.stopMock()` | Restore the real `fetch` |
 

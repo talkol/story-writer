@@ -18,6 +18,8 @@ export interface GenerationResult {
   meta: ChapterMeta | null;
   /** True when the stream ended before the metadata block arrived. */
   metaMissing: boolean;
+  /** The choice that led into this chapter. Absent on chapter one. */
+  chosenAction?: string;
 }
 
 export async function generateChapter(opts: {
@@ -50,12 +52,12 @@ export async function generateChapter(opts: {
   if (metaRaw === null) {
     // Keep the chapter. Only the choices and summary are lost, and those can be
     // re-requested; the prose cannot.
-    return { prose: trimmedProse, meta: null, metaMissing: true };
+    return { prose: trimmedProse, meta: null, metaMissing: true, chosenAction };
   }
 
   try {
     const meta = parseMeta(metaRaw, { title: ctx.needsTitle, actions: !ctx.isFinal });
-    return { prose: trimmedProse, meta, metaMissing: false };
+    return { prose: trimmedProse, meta, metaMissing: false, chosenAction };
   } catch (err) {
     if (err instanceof MetaFormatError) {
       // Unusable metadata is the same situation as metadata that never arrived: the
@@ -63,7 +65,7 @@ export async function generateChapter(opts: {
       // the reader already watched appear, which is the failure the delimited format
       // exists to prevent.
       console.warn('[ai] metadata rejected, keeping the chapter:', err.message);
-      return { prose: trimmedProse, meta: null, metaMissing: true };
+      return { prose: trimmedProse, meta: null, metaMissing: true, chosenAction };
     }
     throw err;
   }
@@ -147,6 +149,7 @@ export function applyChapter(story: Story, result: GenerationResult): Story | un
         kind: 'prose' as const,
         index,
         text: result.prose,
+        ...(result.chosenAction ? { chosenAction: result.chosenAction } : {}),
         ...(result.metaMissing ? { metaMissing: true } : {}),
       },
     ];
@@ -162,7 +165,9 @@ export function applyChapter(story: Story, result: GenerationResult): Story | un
     return {
       chapters,
       achievements: achievement ? [...current.achievements, achievement] : current.achievements,
-      pendingActions: result.meta?.actions ?? [],
+      // The final chapter offers no choices, whatever the model returned. The parser
+      // already drops them, but the ending invariant should not depend on that.
+      pendingActions: ctx.isFinal ? [] : (result.meta?.actions ?? []),
       summary: result.meta?.summary ?? current.summary,
       ...(result.meta?.title && !current.title ? { title: result.meta.title } : {}),
       // A chapter with no metadata leaves the story without choices, so it stays

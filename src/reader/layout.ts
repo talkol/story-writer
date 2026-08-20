@@ -39,6 +39,19 @@ export interface ReaderMetrics {
   columns: number;
 }
 
+/**
+ * The reader's body type at a given scale. Exported because it is not only the
+ * reader's: anything presenting story text — the choices on the Actions screen, the
+ * achievement description — should be set at exactly the size the book is, and they
+ * have no stage to measure.
+ */
+export function readerType(fontScale: FontScale): { fontSize: number; lineHeight: number } {
+  const fontSize = Math.round(BASE_FONT_SIZE * fontScale);
+  // Integer line height: fractional values accumulate rounding error down the page
+  // and the grid stops lining up with the slice boundaries.
+  return { fontSize, lineHeight: Math.round(fontSize * LINE_RATIO) };
+}
+
 export function computeMetrics(
   stageWidth: number,
   stageHeight: number,
@@ -47,10 +60,7 @@ export function computeMetrics(
 ): ReaderMetrics | null {
   if (stageWidth <= 0 || stageHeight <= 0) return null;
 
-  const fontSize = Math.round(BASE_FONT_SIZE * fontScale);
-  // Integer line height: fractional values accumulate rounding error down the page
-  // and the grid stops lining up with the slice boundaries.
-  const lineHeight = Math.round(fontSize * LINE_RATIO);
+  const { fontSize, lineHeight } = readerType(fontScale);
 
   const columns = spread ? 2 : 1;
   const gutter = spread ? 40 : 0;

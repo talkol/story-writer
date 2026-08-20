@@ -6,7 +6,9 @@ import type { Story } from '../types';
  */
 export type PageRef =
   | { kind: 'prose'; chapterIndex: number; sliceIndex: number }
-  | { kind: 'achievement'; chapterIndex: number; achievementId: string };
+  | { kind: 'achievement'; chapterIndex: number; achievementId: string }
+  /** The closing page of a finished book. Derived from status, never stored. */
+  | { kind: 'end'; chapterIndex: number };
 
 /**
  * Flattens the story into a page list. Chapters always start on a new page, which is
@@ -25,6 +27,10 @@ export function buildPages(story: Story, slicesPerChapter: number[]): PageRef[] 
       pages.push({ kind: 'prose', chapterIndex, sliceIndex });
     }
   });
+
+  if (story.status === 'finished' && pages.length > 0) {
+    pages.push({ kind: 'end', chapterIndex: story.chapters.length - 1 });
+  }
 
   return pages;
 }

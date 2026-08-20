@@ -585,17 +585,24 @@ body {
 
 /* ---- Settings, as an iOS grouped list ----------------------------------- */
 
-.settings {
+/*
+ * Shared body box for every screen that sits under a large title — Settings, Genre,
+ * Actions. Defined once so the margins cannot drift apart screen by screen.
+ * `padding-top` is the lead-in below the large title.
+ */
+.settings,
+.genre,
+.actions {
   max-width: 620px;
   margin: 0 auto;
-  padding: 0 var(--gutter) 40px;
+  padding: 10px var(--gutter) 40px;
 }
 
 .settings__banner {
   background: var(--tint-pressed);
   border-radius: var(--radius);
   padding: 12px 14px;
-  margin: 4px 0 24px;
+  margin: 0 4px 24px;
   font-size: 15px;
   line-height: 1.4;
   color: var(--label);
@@ -604,10 +611,7 @@ body {
 .settings__section {
   margin-bottom: 30px;
 }
-/* iOS grouped lists leave a clear gap between the large title and the first header. */
-.settings__section:first-of-type {
-  margin-top: 10px;
-}
+
 
 /* iOS grouped-list section header: small, uppercase, secondary. */
 .settings__heading {
@@ -739,12 +743,6 @@ body {
 }
 
 /* ---- Genre screen ------------------------------------------------------- */
-
-.genre {
-  max-width: 620px;
-  margin: 0 auto;
-  padding: 0 var(--gutter) 24px;
-}
 
 .genre__intro {
   font-size: 15px;
@@ -1200,4 +1198,149 @@ body {
   min-height: 38px;
   padding: 8px 14px;
   font-size: 15px;
+}
+
+/* ---- Actions screen ------------------------------------------------------ */
+
+.actions__intro {
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--label-2);
+  margin: 0 4px 20px;
+}
+
+.actions__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+/* Sentence-length targets, so the whole row is tappable rather than the text alone. */
+.action {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  font: inherit;
+  font-family: var(--font-serif);
+  /* Size and leading come from readerType() so these match the book exactly. */
+  color: var(--label);
+  background: var(--bg-grouped);
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 16px 15px;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.action:active {
+  background: var(--tint-pressed);
+}
+.action:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 2px;
+}
+
+.action__index {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--tint);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.action__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ---- "What happens next?" ------------------------------------------------ */
+
+/*
+ * Absolutely positioned, and that is load-bearing rather than cosmetic. In the layout
+ * flow this bar shortens the stage, which re-paginates the book, which changes which
+ * page is last, which hides the bar again — a loop that leaves the final page
+ * unreachable. Out of flow, the page geometry never moves.
+ */
+.nextbar {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: 10px;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.nextbar .btn--block {
+  max-width: 560px;
+  min-height: 46px;
+  pointer-events: auto;
+  box-shadow: 0 3px 16px rgba(0, 0, 0, 0.18);
+}
+
+/* Fades the last lines of text out from under the button rather than hiding them
+   behind an opaque slab. */
+.nextbar::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--gutter) * -1);
+  right: calc(var(--gutter) * -1);
+  bottom: -10px;
+  height: 130px;
+  background: linear-gradient(to top, var(--bg) 40%, transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ---- End page ------------------------------------------------------------ */
+
+.end-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.end-page__rule {
+  font-size: 1.3em;
+  color: var(--label-3);
+  margin: 0 0 calc(var(--ach-rhythm) * 0.8);
+}
+
+.end-page__title {
+  font-family: var(--font-serif);
+  font-size: 1.6em;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  color: var(--label-2);
+  margin: 0;
+}
+
+.settings__link {
+  color: var(--tint);
+  text-decoration: none;
+  /* Keeps the trailing icon on the same line as the last word. */
+  white-space: nowrap;
+}
+.settings__link:active {
+  opacity: 0.5;
+}
+.settings__link .ph {
+  margin-left: 4px;
+  vertical-align: -1px;
 }

@@ -185,8 +185,18 @@ Two modes, same component:
 ### 4.3 Actions
 - Title "Actions". Four full-width sentence buttons, generous tap targets, each a
   distinct way to push the plot.
-- Tapping one immediately: records `chosenAction`, navigates to Read, and starts
-  generating the next part.
+- Tapping one navigates to Read and starts generating the next chapter, recording the
+  sentence on the chapter it produced.
+- **The choice travels in history state, not the store**, carrying the chapter count at
+  the moment of choosing as a nonce. The reader acts on it only while the story still
+  has exactly that many chapters, which makes the guard an invariant rather than a
+  one-shot flag:
+  - a request aborted for some other reason (leaving the screen, StrictMode's remount
+    in development) leaves the count untouched and simply starts again;
+  - once the chapter commits the count moves on, so a refresh, a back-forward, or the
+    model happening to offer the same sentence twice can never re-fire it.
+  A weaker guard — "is this choice still in `pendingActions`" — looks equivalent and is
+  not: repeated action text sends it into a generation loop that spends real credit.
 - On the final part there are no actions — the reader never reaches this screen; the
   book ends with a "The End" page instead.
 
@@ -208,8 +218,15 @@ Two modes, same component:
     takes the leaf out of view.
 - Nav bar: **trophy icon** → Achievements modal; **book/tag icon** → Genre in edit mode.
   A page indicator (`12 / 47`) sits at the bottom.
-- Reaching the last generated page when actions are pending shows a "What happens next?"
-  affordance leading to the Actions screen.
+- Reaching the last written page when choices are pending shows a "What happens next?"
+  affordance, and **flipping forward past that page** opens the Actions screen — the
+  spec's "after the user flips to the last page".
+- **The affordance is an overlay, out of the layout flow, and that is load-bearing.**
+  Rendered in the column it shortens the stage, which re-paginates the book, which
+  changes which page is last, which hides the affordance, which restores the stage — an
+  oscillation that leaves the final page unreachable and its last lines clipped. Any
+  chrome that appears conditionally *based on* pagination must not be able to *change*
+  pagination. A gradient scrim keeps the text under the button legible.
 - While a part is generating, the newly arriving text is appended live; the reader can
   begin reading page 1 of the new part while the tail is still being written.
 
@@ -523,7 +540,8 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
 5. ~~**AI generation**~~ — *done.* Streaming SSE client, delimited parser, prompt
    assembly, achievement pacing guard, metadata repair, and every error path. Streamed
    prose paginates live via a throttled provisional chapter.
-6. **Choice loop** — Actions screen, continuation, ending logic at `totalChapters`.
+6. ~~**Choice loop**~~ — *done.* Actions screen, the choice hand-off, continuation,
+   and the ending at `totalChapters` with a derived closing page.
 7. **Achievements** — modal, achievement pages, pacing guard.
 8. **Covers** — image generation, downscale, IndexedDB, placeholder and retry.
 9. **PDF export**.

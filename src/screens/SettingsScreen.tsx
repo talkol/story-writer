@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { testApiKey } from '../ai/client';
 import ActionSheet from '../components/ActionSheet';
+import Icon from '../components/Icon';
 import NavBar, { BackButton, LargeTitle, useScrollRef } from '../components/NavBar';
 import { StorageFullError } from '../storage/quota';
 import { loadSettings, saveSettings } from '../storage/settings';
@@ -122,6 +123,22 @@ export default function SettingsScreen() {
                 {status.text}
               </p>
             )}
+
+            {/* Sits directly under the field, which is where someone who has no key
+                is looking. Below the security note it would be missed. */}
+            <p className="settings__note">
+              Don’t have a key?{' '}
+              <a
+                className="settings__link"
+                href="https://platform.openai.com/api-keys"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Create one on the OpenAI platform
+                <Icon name="arrow-square-out" size={13} />
+              </a>
+              . You’ll need an account with billing set up.
+            </p>
 
             <p className="settings__note">
               Stored in this browser’s local storage and sent only to{' '}

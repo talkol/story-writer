@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import AchievementPage from '../components/AchievementPage';
 import ChapterFlow from '../components/ChapterFlow';
+import EndPage from '../components/EndPage';
 import Icon from '../components/Icon';
 import NavBar, { BackButton, NavButton } from '../components/NavBar';
 import { useGeneration, useThrottled } from '../ai/useGeneration';
@@ -141,10 +142,23 @@ export default function ReadScreen() {
     [page, pages.length, story?.id, metrics?.pageHeight],
   );
 
+  const storyId = story?.id;
+  // A chapter committed without its metadata leaves the story with no usable choices.
+  const needsRepair = !!story?.chapters.some((c) => c.kind === 'prose' && c.metaMissing);
+  const canChoose =
+    !!story && story.pendingActions.length > 0 && !isWriting && !needsRepair;
+
   const go = useCallback(
     (direction: 'forward' | 'back') => {
       if (turn) return; // ignore taps mid-turn rather than queueing them up
       const next = direction === 'forward' ? page + step : page - step;
+
+      // Flipping past the end of what has been written is how the reader asks what
+      // happens next — the spec's "after the user flips to the last page".
+      if (direction === 'forward' && next > lastPage) {
+        if (canChoose) navigate(`/story/${storyId}/actions`);
+        return;
+      }
       if (next < 0 || next > lastPage) return;
       setTurn({ from: page, to: next, direction });
       window.setTimeout(() => {
@@ -152,7 +166,7 @@ export default function ReadScreen() {
         setTurn(null);
       }, TURN_MS);
     },
-    [page, step, lastPage, turn],
+    [page, step, lastPage, turn, canChoose, navigate, storyId],
   );
 
   useEffect(() => {
@@ -166,6 +180,35 @@ export default function ReadScreen() {
 
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const jumpToChapterRef = useRef<number | null>(null);
+  const location = useLocation();
+  const handoff = location.state as { chosenAction?: string; afterChapters?: number } | null;
+  const chosenAction = handoff?.chosenAction;
+
+  /**
+   * The Actions screen hands the chosen sentence over in history state, and it stays
+   * there until the chapter it produced has committed.
+   *
+   * The guard is an invariant rather than a one-shot flag: the choice carries the
+   * chapter count from the moment it was made, and only fires while the story still
+   * has exactly that many chapters. The instant a chapter commits the count moves on,
+   * so the choice cannot fire twice — not on a refresh, and not if the model happens
+   * to offer the same sentence again. A request aborted for some other reason (leaving
+   * the screen, or StrictMode's remount in development) leaves the count untouched and
+   * simply starts again.
+   */
+  useEffect(() => {
+    if (!story || !chosenAction) return;
+    if (gen.state.status !== 'idle') return;
+
+    if (handoff?.afterChapters !== story.chapters.length) {
+      // Already spent. Drop it from history so a later reload sees nothing.
+      navigate(location.pathname, { replace: true, state: null });
+      return;
+    }
+
+    jumpToChapterRef.current = story.chapters.length;
+    void gen.start(chosenAction);
+  }, [chosenAction, handoff?.afterChapters, location.pathname, story, gen, navigate]);
 
   /**
    * A freshly created story has nothing in it; write chapter one on arrival.
@@ -203,10 +246,15 @@ export default function ReadScreen() {
     else setChromeHidden((v) => !v);
   }
 
-  // A chapter committed without its metadata leaves the story with no choices.
-  const needsRepair = story.chapters.some((c) => c.kind === 'prose' && c.metaMissing);
+  const visiblePage = turn ? turn.to : page;
 
-  const visible = turn ? turn.to : page;
+  // The choices are offered only once the reader has actually reached the end of what
+  // has been written — the point the spec calls "the last generated page".
+  const onLastPage = pages.length > 0 && visiblePage + step >= pages.length;
+  const showNextPrompt = onLastPage && canChoose;
+  const isLastChapter = chapterCount(story) + 1 >= story.totalChapters;
+
+  const visible = visiblePage;
   const chapterNumber = pages[Math.min(visible, lastPage)]
     ? countProseChaptersTo(displayStory!, pages[Math.min(visible, lastPage)].chapterIndex)
     : 0;
@@ -283,6 +331,27 @@ export default function ReadScreen() {
             </div>
           )}
 
+          {/*
+            An overlay, deliberately outside the layout flow. Rendering this in the
+            column would shrink the stage, which re-paginates the book, which changes
+            which page is last, which hides the affordance again — an oscillation that
+            makes the final page unreachable.
+          */}
+          {showNextPrompt && (
+            <div className="nextbar">
+              <button
+                type="button"
+                className="btn btn--primary btn--block"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/story/${story.id}/actions`);
+                }}
+              >
+                {isLastChapter ? 'Choose how it ends' : 'What happens next?'}
+              </button>
+            </div>
+          )}
+
           {metrics && pages.length === 0 && gen.state.status !== 'writing' && (
             <div className="reader__empty">
               <p>Nothing written yet.</p>
@@ -336,7 +405,7 @@ export default function ReadScreen() {
             <button
               type="button"
               className="btn btn--primary"
-              onClick={() => void (needsRepair ? gen.repair() : gen.start())}
+              onClick={() => void (needsRepair ? gen.repair() : gen.start(chosenAction))}
             >
               Retry
             </button>
@@ -410,6 +479,14 @@ function Page({
     padding: `${metrics.padY}px ${metrics.padX}px`,
   };
 
+  if (ref.kind === 'end') {
+    return (
+      <div className="page" style={box}>
+        <EndPage metrics={metrics} />
+      </div>
+    );
+  }
+
   if (ref.kind === 'achievement') {
     return (
       <div className="page" style={box}>
@@ -420,6 +497,8 @@ function Page({
       </div>
     );
   }
+
+  if (ref.kind !== 'prose') return <div className="page page--blank" style={box} />;
 
   const chapter = story.chapters[ref.chapterIndex];
   if (chapter?.kind !== 'prose') return <div className="page page--blank" style={box} />;

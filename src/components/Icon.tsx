@@ -7,6 +7,7 @@ export type IconName =
   | 'gear'
   | 'trophy'
   | 'sliders-horizontal'
+  | 'arrow-square-out'
   | 'caret-left'
   | 'plus'
   | 'dots-three'
