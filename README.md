@@ -16,11 +16,11 @@ are [Phosphor](https://phosphoricons.com), self-hosted as a WOFF2. See
 
 See [SPEC.md](SPEC.md) for the full product and technical spec.
 
-> **Status: milestone 4 of 10.** Library, Settings, Genre, and the Reader are done —
-> you can create a story, and the fixture stories are fully readable with working
-> pagination, page turns, and the iPad spread. Story *generation* does not exist yet
-> (milestone 5), so a story you create yourself has no chapters. Actions and
-> Achievements are still stubs and Export PDF is disabled. See
+> **Status: milestone 5 of 10.** Creating a story now writes chapter one with the
+> OpenAI API, streaming into the reader as it arrives. Add a key in Settings first.
+> The *choice loop* is not wired yet (milestone 6), so the four options a chapter
+> produces are stored but the Actions screen is still a stub — a story stops after
+> chapter one. Achievements screen is a stub and Export PDF is disabled. See
 > [SPEC.md §10](SPEC.md) for the milestone list.
 
 ---
@@ -59,13 +59,21 @@ cover stays visible. Helpers are on `window.__dev`:
 |---|---|
 | `__dev.seedFixtures()` | Replace the library with the fixtures |
 | `__dev.clearStories()` | Empty the library |
-| `__dev.selftest()` | Run the 20-assertion storage smoke test |
+| `__dev.selftest()` | Run the 46-assertion storage and AI smoke test |
+| `__dev.mockOpenAI(mode)` | Serve a canned OpenAI stream instead of the network |
+| `__dev.stopMock()` | Restore the real `fetch` |
 
 `__dev.selftest()` exercises migrations, store CRUD, the localStorage round-trip,
-settings persistence, and the IndexedDB cover pipeline against a real browser — the
-places where localStorage quirks, quota errors, and canvas encoding actually bite.
-Run it after touching anything under `src/storage/`. It saves and restores your data,
-so it is safe to run against a populated library. Results print with `console.table`.
+settings persistence, the IndexedDB cover pipeline, and the AI parser, prompt builder
+and chapter-commit logic against a real browser. Run it after touching anything under
+`src/storage/` or `src/ai/`. It saves and restores your data, so it is safe to run
+against a populated library. Results print with `console.table`.
+
+`__dev.mockOpenAI(mode)` replaces `fetch` with a canned SSE stream so the whole
+generation path can be exercised without a key or a charge. Modes: `'ok'`,
+`'truncated'`, `'badjson'`, `'http401'`, `'http429'`, `'network'`. A second argument
+sets the per-chunk delay in ms — pass `0` for an instant stream, or `30` to leave it
+running long enough to test Cancel.
 
 Everything under `src/dev/` is reached only through a dynamic import inside an
 `import.meta.env.DEV` branch, so Rollup drops it — fixture prose included — from

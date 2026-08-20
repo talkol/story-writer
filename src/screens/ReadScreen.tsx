@@ -4,13 +4,14 @@ import AchievementPage from '../components/AchievementPage';
 import ChapterFlow from '../components/ChapterFlow';
 import Icon from '../components/Icon';
 import NavBar, { BackButton, NavButton } from '../components/NavBar';
+import { useGeneration, useThrottled } from '../ai/useGeneration';
 import { collectWordAnchors, topOfWord, wordIndexAtY } from '../reader/anchors';
 import { buildPages, firstPageOfChapter, type PageRef } from '../reader/pages';
 import { useChapterSlices, useDebouncedEffect, useReaderMetrics } from '../reader/useReader';
 import { loadSettings } from '../storage/settings';
 import { updateStory } from '../storage/stories';
 import { useStory } from '../storage/useStories';
-import type { Chapter, Story } from '../types';
+import { chapterCount, type Chapter, type Story } from '../types';
 
 const TURN_MS = 380;
 
@@ -27,28 +28,52 @@ export default function ReadScreen() {
   const [fontScale] = useState(() => loadSettings().fontScale);
   const metrics = useReaderMetrics(stageRef, fontScale);
 
+  const gen = useGeneration(story);
+
+  // Measuring on every token would re-paginate the book hundreds of times a chapter.
+  // Appending never moves earlier text, so a throttled copy is safe: page counts only
+  // grow, and pages the reader has already seen keep their boundaries.
+  const liveProse = gen.state.status === 'writing' ? gen.state.prose : '';
+  const isWriting = gen.state.status === 'writing';
+  const throttledProse = useThrottled(liveProse, 500);
+  // The throttle is bypassed the moment writing stops. Letting it lag would leave the
+  // provisional chapter on screen next to the committed one for a beat.
+  const streaming = isWriting ? throttledProse : '';
+
+  /** The story as the reader should see it, including any chapter still arriving. */
+  const displayStory = useMemo(() => {
+    if (!story || !streaming.trim()) return story;
+    return {
+      ...story,
+      chapters: [
+        ...story.chapters,
+        { kind: 'prose' as const, index: story.chapters.length, text: streaming },
+      ],
+    };
+  }, [story, streaming]);
+
   const proseChapters = useMemo(
     () =>
-      (story?.chapters ?? [])
+      (displayStory?.chapters ?? [])
         .map((chapter, index) => ({ chapter, index }))
         .filter((c): c is { chapter: Extract<Chapter, { kind: 'prose' }>; index: number } =>
           c.chapter.kind === 'prose',
         ),
-    [story?.chapters],
+    [displayStory?.chapters],
   );
 
   // Changing text or column width invalidates every measurement.
   const signature = useMemo(
     () =>
-      `${metrics?.columnWidth}:${metrics?.lineHeight}:${story?.chapters.length}:` +
+      `${metrics?.columnWidth}:${metrics?.lineHeight}:${displayStory?.chapters.length}:` +
       proseChapters.map((c) => c.chapter.text.length).join(','),
-    [metrics?.columnWidth, metrics?.lineHeight, story?.chapters.length, proseChapters],
+    [metrics?.columnWidth, metrics?.lineHeight, displayStory?.chapters.length, proseChapters],
   );
 
   const slices = useChapterSlices(measurerRef, metrics, signature);
   const pages = useMemo(
-    () => (story && slices.length ? buildPages(story, slices) : []),
-    [story, slices],
+    () => (displayStory && slices.length ? buildPages(displayStory, slices) : []),
+    [displayStory, slices],
   );
 
   const [page, setPage] = useState(0);
@@ -140,6 +165,33 @@ export default function ReadScreen() {
   }, [go]);
 
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const jumpToChapterRef = useRef<number | null>(null);
+
+  /**
+   * A freshly created story has nothing in it; write chapter one on arrival.
+   *
+   * The condition is the actual state rather than a one-shot flag, so a request
+   * aborted by something other than the reader (leaving the screen, or StrictMode's
+   * remount in development) starts again. It deliberately does not fire on 'error' or
+   * 'cancelled': a failure must never be retried automatically, and a reader who
+   * pressed Cancel must not have it restarted for them.
+   */
+  useEffect(() => {
+    if (!story || gen.state.status !== 'idle') return;
+    if (story.chapters.length > 0 || story.status !== 'draft') return;
+    jumpToChapterRef.current = 0;
+    void gen.start();
+  }, [story, gen]);
+
+  // When a chapter starts arriving, move the reader to its first page.
+  useEffect(() => {
+    const target = jumpToChapterRef.current;
+    if (target === null || !pages.length) return;
+    const first = pages.findIndex((p) => p.chapterIndex === target);
+    if (first === -1) return;
+    jumpToChapterRef.current = null;
+    setPage(clampToStep(first, step));
+  }, [pages, step]);
 
   if (!story) return <Navigate to="/library" replace />;
 
@@ -151,9 +203,12 @@ export default function ReadScreen() {
     else setChromeHidden((v) => !v);
   }
 
+  // A chapter committed without its metadata leaves the story with no choices.
+  const needsRepair = story.chapters.some((c) => c.kind === 'prose' && c.metaMissing);
+
   const visible = turn ? turn.to : page;
   const chapterNumber = pages[Math.min(visible, lastPage)]
-    ? countProseChaptersTo(story, pages[Math.min(visible, lastPage)].chapterIndex)
+    ? countProseChaptersTo(displayStory!, pages[Math.min(visible, lastPage)].chapterIndex)
     : 0;
 
   return (
@@ -208,14 +263,14 @@ export default function ReadScreen() {
                 const leavingIndex = turn ? turn.from + column : -1;
                 return (
                   <div className="leafbox" key={column}>
-                    <Page story={story} pages={pages} index={index} metrics={metrics} />
+                    <Page story={displayStory!} pages={pages} index={index} metrics={metrics} />
                     {turn && (
                       <div
                         className={`leaf leaf--${spineSide(metrics.columns, column, turn.direction)}`}
                         style={{ animationDuration: `${TURN_MS}ms` }}
                       >
                         <Page
-                          story={story}
+                          story={displayStory!}
                           pages={pages}
                           index={leavingIndex}
                           metrics={metrics}
@@ -228,29 +283,84 @@ export default function ReadScreen() {
             </div>
           )}
 
-          {metrics && pages.length === 0 && (
+          {metrics && pages.length === 0 && gen.state.status !== 'writing' && (
             <div className="reader__empty">
-              <p>
-                This story has no chapters yet. Chapter one is written by the AI, which
-                arrives in milestone 5.
-              </p>
+              <p>Nothing written yet.</p>
               <p className="reader__empty-meta">
                 {story.audience} · {story.genre} · {story.setting} — {story.totalChapters}{' '}
-                chapters planned
+                chapters
               </p>
+              <button type="button" className="btn btn--primary" onClick={() => void gen.start()}>
+                Write chapter one
+              </button>
+            </div>
+          )}
+
+          {pages.length === 0 && gen.state.status === 'writing' && (
+            <div className="reader__empty">
+              <p className="reader__thinking">Thinking of an opening…</p>
             </div>
           )}
           </div>
         </div>
 
         <footer className="pagebar">
-          <span>
-            {pages.length > 0
-              ? `Chapter ${chapterNumber} · page ${Math.min(visible + 1, pages.length)} of ${pages.length}`
-              : story.title}
-          </span>
+          {gen.state.status === 'writing' ? (
+            <span className="pagebar__live">
+              <span className="pagebar__pulse" aria-hidden="true" />
+              Writing chapter {chapterCount(story) + 1} of {story.totalChapters}
+              <button type="button" className="pagebar__action" onClick={gen.cancel}>
+                Cancel
+              </button>
+            </span>
+          ) : (
+            <span>
+              {pages.length > 0
+                ? `Chapter ${chapterNumber} · page ${Math.min(visible + 1, pages.length)} of ${pages.length}`
+                : story.title}
+            </span>
+          )}
         </footer>
       </div>
+
+      {gen.state.status === 'error' && (
+        <div className="genbanner" role="alert">
+          <p className="genbanner__msg">{gen.state.message}</p>
+          <div className="genbanner__actions">
+            <button type="button" className="btn" onClick={gen.dismissError}>
+              Dismiss
+            </button>
+            <button type="button" className="btn" onClick={() => navigate('/settings')}>
+              Settings
+            </button>
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={() => void (needsRepair ? gen.repair() : gen.start())}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
+      {needsRepair && gen.state.status === 'idle' && (
+        <div className="genbanner" role="status">
+          <p className="genbanner__msg">
+            This chapter arrived without its choices. The text is safe — only the
+            four options and the summary are missing.
+          </p>
+          <div className="genbanner__actions">
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={() => void gen.repair()}
+            >
+              Get the choices
+            </button>
+          </div>
+        </div>
+      )}
 
       {/*
         Hidden measurer: every chapter laid out once at the real column width. One
@@ -264,7 +374,7 @@ export default function ReadScreen() {
               <ChapterFlow
                 text={chapter.text}
                 metrics={metrics}
-                heading={`Chapter ${countProseChaptersTo(story, index)}`}
+                heading={`Chapter ${countProseChaptersTo(displayStory!, index)}`}
               />
             </div>
           ))}

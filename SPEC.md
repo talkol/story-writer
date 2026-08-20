@@ -306,9 +306,12 @@ fragility of partial-JSON parsing:
   token with zero parsing. This is what makes text appear within a second or two.
 - The metadata block arrives last and is parsed once, complete, with `JSON.parse`.
 - `title` is only requested on part 1.
-- If the stream ends before `===META===`, keep the prose, mark the part
-  `metaMissing`, and offer a "Continue" retry that re-requests just the metadata from
-  the same context. A truncated raw-JSON stream would have lost everything.
+- If the stream ends before `===META===` — **or the metadata arrives malformed** —
+  keep the prose, mark the chapter `metaMissing`, and offer a "Get the choices" retry
+  that re-sends the prose and asks only for the JSON block. A truncated raw-JSON
+  stream would have lost the whole chapter. Rejecting a chapter because its trailing
+  JSON was bad would be the same failure by another route, so a `MetaFormatError` on
+  a first pass is never fatal.
 - Validate the parsed meta with a small runtime guard (exactly 4 non-empty actions;
   achievement either null or `{title, description}`) and retry once on violation.
 
@@ -376,11 +379,32 @@ story.
 - Rough per-book scale: an adult book is 30 generations over a growing-but-capped
   context; children's books are a fraction of that. Verify current per-token pricing
   before quoting numbers to anyone — model pricing changes.
-- Handle explicitly: 401 (bad key → Settings), 429 (rate/quota → retry with backoff,
-  distinguish "rate limited" from "out of credit"), 5xx (retry twice), network offline,
-  user abort, content refusal (rare, but surface it plainly and offer regeneration).
-- Every failure must leave the story in a consistent state — never a half-written part
+- Handled explicitly, each verified against a mocked stream: 401 (bad key → Settings),
+  429 (distinguishing "rate limited" from "out of credit"), 5xx, network offline, user
+  cancel, truncated stream, and malformed metadata.
+- Every failure leaves the story in a consistent state — never a half-written chapter
   with no actions and no way forward.
+- **A user cancel is not an error and not an incidental abort.** Generation state
+  carries a distinct `cancelled` status, because auto-start is driven by state rather
+  than a one-shot flag: an abort caused by leaving the screen (or by React StrictMode's
+  remount in development) must restart, while a reader who pressed Cancel must not have
+  it restarted for them.
+
+### 6.8 Streaming into the reader
+
+Streamed prose is appended to the story as a **provisional chapter** so it paginates
+through the same path as committed text — the reader can start page one while the tail
+is still arriving. Two details make that safe:
+
+- The text fed to the measurer is **throttled to 500ms**. Measuring per token would
+  re-paginate the book hundreds of times a chapter. Appending never moves earlier text,
+  so a delayed measurement only ever grows the page count; boundaries the reader has
+  already passed do not shift.
+- The throttle is **bypassed the instant writing stops**, otherwise the provisional
+  chapter lingers beside the committed one for a beat.
+- Nothing is written to storage until the chapter completes. Committing per token would
+  be thousands of localStorage writes, and a half-written chapter has no business
+  surviving a reload.
 
 ---
 
@@ -496,7 +520,9 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
    keys, page-turn animation, iPad two-page spread, immersive mode, word-anchored
    resume that survives reflow, achievement pages in the page sequence, and inline
    emphasis rendering.
-5. **AI generation** — streaming client, delimited parser, prompt assembly, error paths.
+5. ~~**AI generation**~~ — *done.* Streaming SSE client, delimited parser, prompt
+   assembly, achievement pacing guard, metadata repair, and every error path. Streamed
+   prose paginates live via a throttled provisional chapter.
 6. **Choice loop** — Actions screen, continuation, ending logic at `totalChapters`.
 7. **Achievements** — modal, achievement pages, pacing guard.
 8. **Covers** — image generation, downscale, IndexedDB, placeholder and retry.

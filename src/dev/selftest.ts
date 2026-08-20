@@ -1,3 +1,6 @@
+import { applyChapter } from '../ai/generate';
+import { displayableProse, MetaFormatError, parseMeta, splitOnDelimiter } from '../ai/parse';
+import { buildContext, buildSystemPrompt, buildUserPrompt } from '../ai/prompts';
 import { deleteCover, getCover, normalizeCover, putCover } from '../storage/covers.idb';
 import { migrate, wrap } from '../storage/migrations';
 import { loadSettings, saveSettings } from '../storage/settings';
@@ -21,6 +24,16 @@ type Result = { name: string; pass: boolean; detail?: string };
 
 function check(name: string, pass: boolean, detail?: string): Result {
   return { name, pass, detail };
+}
+
+/** True when `fn` throws a MetaFormatError, which is the only failure we accept. */
+function throws(fn: () => unknown): boolean {
+  try {
+    fn();
+    return false;
+  } catch (err) {
+    return err instanceof MetaFormatError;
+  }
 }
 
 export async function selftest(): Promise<{ passed: number; failed: number; results: Result[] }> {
@@ -135,6 +148,184 @@ export async function selftest(): Promise<{ passed: number; failed: number; resu
     results.push(check('settings: fontScale persists', reloaded.fontScale === 1.15));
     saveSettings({ apiKey: null, fontScale: 1 });
     results.push(check('settings: empty key normalises to null', loadSettings().apiKey === null));
+
+    // --- AI: delimited stream format ------------------------------------------
+    const withMeta = 'The bell rang.\n\n===META===\n{"actions":[]}';
+    results.push(
+      check(
+        'parse: splits prose from meta',
+        splitOnDelimiter(withMeta).prose.trim() === 'The bell rang.' &&
+          splitOnDelimiter(withMeta).metaRaw?.trim() === '{"actions":[]}',
+      ),
+    );
+    results.push(
+      check(
+        'parse: tolerates loose delimiter',
+        splitOnDelimiter('a\n== META ==\n{}').metaRaw?.trim() === '{}',
+      ),
+    );
+    results.push(
+      check('parse: no delimiter yields null meta', splitOnDelimiter('just prose').metaRaw === null),
+    );
+
+    // While streaming, a delimiter forming at the tail must not reach the reader.
+    results.push(
+      check('parse: withholds partial delimiter', displayableProse('The bell rang.\n===ME') === 'The bell rang.'),
+    );
+    results.push(
+      check('parse: passes prose through untouched', displayableProse('The bell rang.') === 'The bell rang.'),
+    );
+    results.push(
+      check(
+        'parse: an equals sign mid-prose is not a delimiter',
+        displayableProse('x = 3 and more text') === 'x = 3 and more text',
+      ),
+    );
+
+    // --- AI: metadata validation ----------------------------------------------
+    const goodMeta = JSON.stringify({
+      title: 'The Drowned Bell',
+      actions: ['a', 'b', 'c', 'd'],
+      achievement: { title: 'First Step', description: 'You began.' },
+      summary: 'A summary.',
+    });
+    const parsed = parseMeta(goodMeta, { title: true, actions: true });
+    results.push(
+      check(
+        'meta: parses a well-formed block',
+        parsed.title === 'The Drowned Bell' &&
+          parsed.actions.length === 4 &&
+          parsed.achievement?.title === 'First Step',
+      ),
+    );
+    results.push(
+      check(
+        'meta: strips code fences',
+        parseMeta('```json\n' + goodMeta + '\n```', { title: true, actions: true }).summary ===
+          'A summary.',
+      ),
+    );
+    results.push(
+      check('meta: rejects wrong action count', throws(() =>
+        parseMeta(JSON.stringify({ actions: ['a'], summary: 's' }), { title: false, actions: true }),
+      )),
+    );
+    results.push(
+      check('meta: rejects missing summary', throws(() =>
+        parseMeta(JSON.stringify({ actions: ['a', 'b', 'c', 'd'] }), { title: false, actions: true }),
+      )),
+    );
+    results.push(
+      check('meta: rejects invalid JSON', throws(() => parseMeta('not json', { title: false, actions: false }))),
+    );
+    results.push(
+      check(
+        'meta: drops a malformed achievement without failing',
+        parseMeta(JSON.stringify({ actions: [], summary: 's', achievement: { title: 'x' } }), {
+          title: false,
+          actions: false,
+        }).achievement === null,
+      ),
+    );
+    results.push(
+      check(
+        'meta: final chapter discards stray actions',
+        parseMeta(JSON.stringify({ actions: ['a', 'b'], summary: 's' }), {
+          title: false,
+          actions: false,
+        }).actions.length === 0,
+      ),
+    );
+
+    // --- AI: prompt assembly ---------------------------------------------------
+    const promptStory = createStory({ audience: 'Children', genre: 'Comedy', setting: 'Space' });
+    const ctx1 = buildContext(promptStory);
+    results.push(
+      check(
+        'prompt: first chapter asks for a title',
+        ctx1.needsTitle && ctx1.chapterNumber === 1 && ctx1.wordTarget === 250,
+      ),
+    );
+    results.push(
+      check(
+        'prompt: system prompt carries genre and length',
+        buildSystemPrompt(promptStory, ctx1).includes('chapter 1 of 10') &&
+          buildSystemPrompt(promptStory, ctx1).includes('GENRE: Comedy'),
+      ),
+    );
+    results.push(
+      check(
+        'prompt: chosen action reaches the model',
+        buildUserPrompt({ ...promptStory, chapters: [{ kind: 'prose', index: 0, text: 'x' }] }, {
+          ...ctx1,
+          chapterNumber: 2,
+        }, 'Open the hatch.').includes('Open the hatch.'),
+      ),
+    );
+
+    // --- AI: committing a generated chapter ------------------------------------
+    applyChapter(promptStory, {
+      prose: 'Once upon a time.',
+      meta: {
+        title: 'Biscuit in Space',
+        actions: ['a', 'b', 'c', 'd'],
+        achievement: { title: 'Lift Off', description: 'You left the ground.' },
+        summary: 'Rabbit goes up.',
+      },
+      metaMissing: false,
+    });
+    const afterOne = getStory(promptStory.id)!;
+    results.push(
+      check(
+        'apply: chapter, title, summary and actions committed',
+        afterOne.title === 'Biscuit in Space' &&
+          afterOne.summary === 'Rabbit goes up.' &&
+          afterOne.pendingActions.length === 4 &&
+          afterOne.status === 'reading',
+      ),
+    );
+    results.push(
+      check(
+        'apply: achievement becomes a page and an entry',
+        afterOne.chapters.length === 2 &&
+          afterOne.chapters[1].kind === 'achievement' &&
+          afterOne.achievements[0]?.unlockedAtChapter === 1,
+      ),
+    );
+
+    // Pacing guard: a second achievement one chapter later must be refused.
+    applyChapter(afterOne, {
+      prose: 'And then more.',
+      meta: {
+        actions: ['a', 'b', 'c', 'd'],
+        achievement: { title: 'Too Soon', description: 'Should not stick.' },
+        summary: 's2',
+      },
+      metaMissing: false,
+    });
+    const afterTwo = getStory(promptStory.id)!;
+    results.push(
+      check(
+        'apply: rejects an achievement awarded too soon',
+        afterTwo.achievements.length === 1,
+        `${afterTwo.achievements.length} achievement(s)`,
+      ),
+    );
+
+    // A stream that died before the delimiter still keeps its prose.
+    applyChapter(afterTwo, { prose: 'Truncated chapter.', meta: null, metaMissing: true });
+    const afterThree = getStory(promptStory.id)!;
+    const lastChapter = afterThree.chapters.at(-1);
+    results.push(
+      check(
+        'apply: truncated stream keeps prose and flags repair',
+        lastChapter?.kind === 'prose' &&
+          lastChapter.metaMissing === true &&
+          afterThree.pendingActions.length === 0,
+      ),
+    );
+
+    removeStory(promptStory.id);
 
     // --- covers (IndexedDB + canvas downscale) --------------------------------
     const canvas = document.createElement('canvas');

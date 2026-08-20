@@ -78,7 +78,7 @@ export default function SettingsScreen() {
         <div className="settings">
           {next && (
             <p className="settings__banner">
-              A story is written by OpenAI, so the app needs your API key before it can
+              Stories are written by AI, so the app needs your OpenAI API key before it can
               create one. Add it below and you’ll be taken straight back.
             </p>
           )}
@@ -131,7 +131,7 @@ export default function SettingsScreen() {
           </section>
 
           <section className="settings__section">
-            <h2 className="settings__heading">Reading</h2>
+            <h2 className="settings__heading">Text Size</h2>
             <div className="settings__row" role="group" aria-label="Text size">
               {FONT_SCALES.map((scale) => (
                 <button

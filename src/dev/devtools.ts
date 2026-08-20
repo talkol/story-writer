@@ -1,5 +1,6 @@
 import { normalizeCover, putCover } from '../storage/covers.idb';
 import { getSnapshot, replaceAll, updateStory } from '../storage/stories';
+import { saveSettings, loadSettings } from '../storage/settings';
 import { FIXTURE_STORIES } from './fixtures';
 import { selftest } from './selftest';
 
@@ -69,9 +70,119 @@ export function seedIfEmpty(): void {
   if (getSnapshot().length === 0) void seedFixtures();
 }
 
+/**
+ * Serves a canned OpenAI SSE stream in place of the network, so the whole generation
+ * path — streaming, delimiter handling, validation, commit, and the reader UI — can be
+ * exercised without a real key or a real charge.
+ *
+ * `mode` picks which failure to rehearse. Call `stopMock()` to restore fetch.
+ */
+export type MockMode = 'ok' | 'truncated' | 'badjson' | 'http401' | 'http429' | 'network';
+
+let realFetch: typeof fetch | null = null;
+
+export function mockOpenAI(mode: MockMode = 'ok', chunkDelayMs = 20): void {
+  if (!realFetch) realFetch = window.fetch.bind(window);
+
+  const prose = [
+    'The lift doors opened onto a corridor that should not have existed.',
+    'Tomas counted the doors twice. There were nine. The building had eight floors.',
+    'He stepped out anyway, because that is the kind of person he had decided to be.',
+  ].join('\n\n');
+
+  const meta = {
+    title: 'The Ninth Door',
+    actions: [
+      'Open the ninth door.',
+      'Go back down and tell the caretaker.',
+      'Count the doors a third time.',
+      'Wait in the corridor until someone comes.',
+    ],
+    achievement: { title: 'Ninth Door', description: 'You found a floor that was not there.' },
+    summary: 'Tomas finds an impossible ninth floor in his own building and steps out.',
+  };
+
+  const body =
+    mode === 'truncated'
+      ? prose
+      : mode === 'badjson'
+        ? prose + '\n\n===META===\n{ this is not json'
+        : prose + '\n\n===META===\n' + JSON.stringify(meta);
+
+  window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (!url.includes('/chat/completions')) return realFetch!(input, init);
+
+    if (mode === 'network') throw new TypeError('Failed to fetch');
+    if (mode === 'http401' || mode === 'http429') {
+      const status = mode === 'http401' ? 401 : 429;
+      return new Response(JSON.stringify({ error: { message: 'mock quota exceeded' } }), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Emit the body as SSE frames, honouring abort.
+    //
+    // With chunkDelayMs = 0 no timers are used at all. That matters for automated
+    // checks: a tab that has been hidden for a while gets *intensive* timer
+    // throttling (roughly once a minute), which turns a per-chunk delay into a stall.
+    const words = body.split(/(\s+)/);
+    const perFrame = chunkDelayMs === 0 ? Math.ceil(words.length / 4) : 6;
+    const signal = init?.signal ?? undefined;
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        // Real fetch rejects an in-flight read the moment the signal aborts. Checking
+        // only between chunks would make Cancel appear broken whenever a chunk delay
+        // is in play.
+        let aborted = false;
+        signal?.addEventListener('abort', () => {
+          aborted = true;
+          try {
+            controller.error(new DOMException('Aborted', 'AbortError'));
+          } catch {
+            /* already closed */
+          }
+        });
+        for (let i = 0; i < words.length; i += perFrame) {
+          if (aborted || signal?.aborted) return;
+          const piece = words.slice(i, i + perFrame).join('');
+          const frame = { choices: [{ delta: { content: piece } }] };
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(frame)}\n\n`));
+          if (chunkDelayMs > 0) await new Promise((r) => setTimeout(r, chunkDelayMs));
+        }
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' },
+    });
+  }) as typeof fetch;
+
+  // The client refuses to run without a key; supply a fake one for the mock.
+  if (!loadSettings().apiKey) saveSettings({ ...loadSettings(), apiKey: 'sk-mock-key' });
+  console.info(`[dev] OpenAI mocked in "${mode}" mode — call __dev.stopMock() to restore`);
+}
+
+export function stopMock(): void {
+  if (realFetch) window.fetch = realFetch;
+  realFetch = null;
+  console.info('[dev] real fetch restored');
+}
+
 export function install(): void {
   seedIfEmpty();
-  window.__dev = { seedFixtures, clearStories: () => replaceAll([]), selftest };
+  window.__dev = {
+    seedFixtures,
+    clearStories: () => replaceAll([]),
+    selftest,
+    mockOpenAI,
+    stopMock,
+  };
   console.info('[dev] window.__dev ready — try __dev.selftest()');
 }
 
@@ -81,6 +192,8 @@ declare global {
       seedFixtures: () => Promise<void>;
       clearStories: () => void;
       selftest: typeof selftest;
+      mockOpenAI: typeof mockOpenAI;
+      stopMock: typeof stopMock;
     };
   }
 }
