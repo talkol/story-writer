@@ -16,11 +16,11 @@ are [Phosphor](https://phosphoricons.com), self-hosted as a WOFF2. See
 
 See [SPEC.md](SPEC.md) for the full product and technical spec.
 
-> **Status: milestone 6 of 10.** The app is playable end to end: create a story, read
-> chapter one as it streams in, choose what happens next, and carry on to the ending.
-> Add an OpenAI key in Settings first. Still to come: the Achievements modal is a stub,
-> covers are placeholders, and Export PDF is disabled. See [SPEC.md §10](SPEC.md) for
-> the milestone list.
+> **Status: milestone 7 of 10.** The app is playable end to end: create a story, read
+> chapter one as it streams in, choose what happens next, collect achievements, and
+> carry on to the ending. Add an OpenAI key in Settings first. Still to come: covers
+> are placeholders and Export PDF is disabled. See [SPEC.md §10](SPEC.md) for the
+> milestone list.
 
 ---
 

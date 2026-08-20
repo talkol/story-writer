@@ -542,7 +542,8 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
    prose paginates live via a throttled provisional chapter.
 6. ~~**Choice loop**~~ — *done.* Actions screen, the choice hand-off, continuation,
    and the ending at `totalChapters` with a derived closing page.
-7. **Achievements** — modal, achievement pages, pacing guard.
+7. ~~**Achievements**~~ — *done.* The modal sheet. Achievement pages landed with the
+   reader (4) and the pacing guard with generation (5).
 8. **Covers** — image generation, downscale, IndexedDB, placeholder and retry.
 9. **PDF export**.
 10. **Polish** — reduced motion, resume position, quota handling, offline, iOS Safari

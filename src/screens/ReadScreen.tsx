@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import AchievementPage from '../components/AchievementPage';
+import AchievementsSheet from '../components/AchievementsSheet';
 import ChapterFlow from '../components/ChapterFlow';
 import EndPage from '../components/EndPage';
 import Icon from '../components/Icon';
@@ -18,7 +19,7 @@ const TURN_MS = 380;
 
 type Turn = { from: number; to: number; direction: 'forward' | 'back' } | null;
 
-export default function ReadScreen() {
+export default function ReadScreen({ showAchievements = false }: { showAchievements?: boolean }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const story = useStory(id);
@@ -269,7 +270,11 @@ export default function ReadScreen() {
             <>
               <NavButton
                 label="Achievements"
-                onClick={() => navigate(`/story/${story.id}/achievements`)}
+                onClick={() =>
+                  showAchievements
+                    ? navigate(`/story/${story.id}/read`, { replace: true })
+                    : navigate(`/story/${story.id}/achievements`)
+                }
               >
                 <Icon name="trophy" size={21} />
               </NavButton>
@@ -429,6 +434,14 @@ export default function ReadScreen() {
             </button>
           </div>
         </div>
+      )}
+
+      {showAchievements && (
+        <AchievementsSheet
+          achievements={story.achievements}
+          totalChapters={story.totalChapters}
+          onClose={() => navigate(`/story/${story.id}/read`, { replace: true })}
+        />
       )}
 
       {/*

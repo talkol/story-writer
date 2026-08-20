@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import AchievementsScreen from './screens/AchievementsScreen';
 import ActionsScreen from './screens/ActionsScreen';
 import GenreScreen from './screens/GenreScreen';
 import LibraryScreen from './screens/LibraryScreen';
@@ -25,7 +24,9 @@ export default function App() {
         <Route path="/story/:id/genre" element={<GenreScreen />} />
         <Route path="/story/:id/read" element={<ReadScreen />} />
         <Route path="/story/:id/actions" element={<ActionsScreen />} />
-        <Route path="/story/:id/achievements" element={<AchievementsScreen />} />
+        {/* Renders the reader with the achievements sheet over it: the book stays
+            visible behind, and the back gesture closes the sheet. */}
+        <Route path="/story/:id/achievements" element={<ReadScreen showAchievements />} />
         <Route path="*" element={<Navigate to="/library" replace />} />
       </Routes>
     </div>
