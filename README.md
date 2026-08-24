@@ -22,9 +22,9 @@ See [SPEC.md](SPEC.md) for the full product and technical spec.
 > if they fail, and a finished story exports as a PDF book. Add an OpenAI key in
 > Settings first.
 >
-> The one path never exercised against the live API is image generation — everything
-> there was built and verified against a mock. See [SPEC.md §11](SPEC.md) for the
-> remaining risks.
+> Verified end to end against the live OpenAI API: a full 10-chapter book, cover and
+> PDF. See [SPEC.md §11a](SPEC.md) for what that run measured, and §11 for remaining
+> risks.
 
 > **Note on cost:** covers generate automatically for any story that lacks one,
 > including stories created before this existed. With a key saved, opening the app will

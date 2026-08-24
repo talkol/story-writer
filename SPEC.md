@@ -686,6 +686,32 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
   clearing first re-renders the route that just threw and lands straight back in the
   fallback.
 
+## 11a. Verified against the live API
+
+A full 10-chapter Children's book was generated end to end on a real key
+(*Lantern Fox and the Skybridge*, 3,135 words, ~12 calls, about four minutes).
+
+Confirmed working: the separate title call; SSE streaming; the `===META===` contract
+(honoured on **10 of 10** chapters, no truncation, no delimiter leaking into prose);
+four distinct actions every turn; the choice loop with genuine continuity from the
+chosen sentence; the achievement pacing guard (2 awarded, four chapters apart); the
+ending at `totalChapters` with no actions and a real resolution; cover generation; and
+PDF export with real prose.
+
+Measured behaviour worth keeping in mind:
+
+- **Chapters run long.** Against a 250-word target, actual chapters were 281–382 words
+  (mean ~313, about 25% over). The target is a request, not a cap, so a Children's book
+  lands nearer 3,100 words than 2,500. Scale the target down if length matters.
+- **The summary self-regulated.** It ranged 232–435 words against the 500-word request
+  and never exceeded it, so the uncapped-summary risk did not materialise here. Still
+  unguarded, though.
+- **Chapter latency was 17–27s** with `reasoning_effort: low`.
+- **The image model misspells.** The first cover rendered "AND TIE SKYBRIDGE" for "AND
+  THE SKYBRIDGE" — every other word correct. This is the known cost of having the model
+  letter the cover rather than compositing the text locally; short function words are
+  where it fails. Regenerating is the only remedy.
+
 ## 11. Open risks
 
 - **Key exposure.** A browser-held OpenAI key is readable by anything running in this
@@ -700,7 +726,11 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
   every subsequent prompt with no error and no signal — gradual cost creep rather than a
   failure. The prose window, by contrast, is hard-sliced.
 - **Achievement pacing**, per §6.5.
-- **Streaming on iOS Safari.** Verify `fetch` streaming behaves in a home-screen PWA
-  context early — it's the one platform detail most likely to surprise.
+- **Streaming on iOS Safari.** Verified working in desktop Chrome; the home-screen PWA
+  context on iOS remains unverified and is the one platform detail most likely to
+  surprise.
+- **Cover spelling.** The image model misspells short words in titles (§11a). If this
+  proves common, compositing the text in canvas over wordless artwork would make it
+  exact — at the cost of type that sits on the image rather than in it.
 - **Genre switching mid-story** can produce tonal whiplash by design. The "deliberate
   shift" prompt flag mitigates it but won't eliminate it.
