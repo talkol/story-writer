@@ -95,7 +95,7 @@ export const FIXTURE_STORIES: Story[] = [
     audience: 'Young Adults',
     genre: 'Mystery',
     setting: 'Fantasy',
-    totalChapters: 20,
+    totalChapters: 12,
     chapters: [
       { kind: 'prose', index: 0, text: LANTERN_P1 },
       {
@@ -140,7 +140,7 @@ export const FIXTURE_STORIES: Story[] = [
     audience: 'Children',
     genre: 'Adventure',
     setting: 'Nature',
-    totalChapters: 10,
+    totalChapters: 6,
     chapters: [
       {
         kind: 'prose',
@@ -169,7 +169,7 @@ export const FIXTURE_STORIES: Story[] = [
     audience: 'Adults',
     genre: 'Crime',
     setting: 'Urban',
-    totalChapters: 30,
+    totalChapters: 20,
     chapters: [],
     achievements: [],
     pendingActions: [],

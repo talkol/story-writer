@@ -13,24 +13,30 @@ export const META_DELIMITER = '===META===';
  * given to the model, and the guard that rejects what it returns. Splitting them across
  * files is how they drift.
  *
- * At one per ten chapters, and with books of 6 / 12 / 20 chapters, the expected haul is
- * roughly 0.6 for a Children's book, 1.2 for Young Adults and 2 for Adults — so a
- * Children's book will often finish with none at all. That is a consequence of the
- * shorter book lengths, not a separate decision: the rate stayed at ten while the books
- * got shorter. Lower it to about six if an achievement per book matters more than
- * rarity.
+ * The rate is set from the book lengths, not chosen in the abstract: at one per six
+ * chapters, books of 6 / 12 / 20 chapters earn roughly 1 / 2 / 3 achievements. That is
+ * the per-book haul the design was tuned for, preserved across the move to shorter
+ * books — the previous rate of ten was calibrated against 10 / 20 / 30 chapters and
+ * would now leave most Children's books with none at all.
  */
-export const ACHIEVEMENT_EVERY_CHAPTERS = 10;
+export const ACHIEVEMENT_EVERY_CHAPTERS = 6;
 
 /**
  * Hard floor enforced client-side. The model decides *whether* a chapter earned an
  * achievement; this only stops them clustering. Set below the target so ordinary
- * variance is allowed and only runaway pacing is refused.
- *
- * Note this now equals the whole length of a Children's book, so such a book can hold
- * at most one achievement by construction.
+ * variance is allowed and only runaway pacing is refused — kept at roughly 60% of the
+ * target rate, as it was before the book lengths changed.
  */
-export const MIN_CHAPTERS_BETWEEN_ACHIEVEMENTS = 6;
+export const MIN_CHAPTERS_BETWEEN_ACHIEVEMENTS = 3;
+
+/**
+ * How much of a book is spent converging on its ending, as a fraction of its length.
+ *
+ * A fixed one-chapter runway does not travel across book lengths: it is a sixth of a
+ * Children's book and a twentieth of an adult one, so the long books got the least room
+ * to land. As a fraction it comes out at 1 / 2 / 3 chapters for 6 / 12 / 20.
+ */
+const ENDGAME_FRACTION = 0.15;
 
 /** Everything the model needs to know about where it is in the book. */
 export interface ChapterContext {
@@ -43,6 +49,11 @@ export interface ChapterContext {
   /** null when none has been awarded yet — there is nothing to be too close to. */
   chaptersSinceLastAchievement: number | null;
   genreJustChanged: boolean;
+}
+
+/** Chapters of convergence before the final one. Always at least one. */
+function endgameRunway(totalChapters: number): number {
+  return Math.max(1, Math.round(totalChapters * ENDGAME_FRACTION));
 }
 
 export function buildContext(story: Story, forLastChapter = false): ChapterContext {
@@ -60,7 +71,7 @@ export function buildContext(story: Story, forLastChapter = false): ChapterConte
     totalChapters: story.totalChapters,
     wordTarget: profile.wordsPerChapter,
     isFinal: chapterNumber >= story.totalChapters,
-    isNearEnd: chapterNumber >= story.totalChapters - 1,
+    isNearEnd: chapterNumber >= story.totalChapters - endgameRunway(story.totalChapters),
     // The story is normally named at creation, before any prose. Chapter one is only
     // asked for a title if nothing has supplied one — a story created before titles
     // moved up front, or one whose naming call failed.

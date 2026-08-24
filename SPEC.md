@@ -542,6 +542,12 @@ different choices:
 Both branches did open on the same beat, a variation of the same sentence, since they
 continue the same scene — the seam converges even though the chapters do not.
 
+**Endgame runway.** `isNearEnd` marks the chapters that must converge on an ending. It
+is a fraction of the book (`ENDGAME_FRACTION`, 0.15) rather than a fixed final chapter:
+one chapter is a sixth of a Children's book but a twentieth of an adult one, so a
+constant left the longest books the least room to land. It works out at 1 / 2 / 3
+chapters for 6 / 12 / 20, always at least one.
+
 Continuity: honor the summary and recent prose exactly. Never contradict established
 facts, names, or the protagonist's voice.
 
@@ -559,7 +565,7 @@ The model decides, freely. Two guardrails keep it from firing every chapter or n
 firing, without taking the decision away from it:
 
 - The prompt carries `chaptersSinceLastAchievement` and asks for one **on average about
-  once every 10 chapters**, stating explicitly that most chapters should return null.
+  once every 6 chapters**, stating explicitly that most chapters should return null.
 - Client-side rejection below a hard floor of **6 chapters** since the last award. Set
   below the target so ordinary variance is allowed and only clustering is refused.
 
@@ -568,12 +574,11 @@ Both numbers live in `prompts.ts` as `ACHIEVEMENT_EVERY_CHAPTERS` and
 the guard must agree and two files is how they drift.
 
 **The rate is uniform across audiences**, so chapter count decides the total: roughly
-roughly 0.6 achievements for a Children's book (6 chapters), 1.2 for Young Adults (12)
-and 2 for Adults (20). A Children's book will therefore often finish with none — the
-rate stayed at one per ten while the books were shortened, so rarity now bites hardest
-on the shortest book. `MIN_CHAPTERS_BETWEEN_ACHIEVEMENTS` is 6, which is the entire
-length of a Children's book, so such a book can hold at most one by construction. Lower
-the rate to about six if an achievement per book matters more than rarity.
+roughly one achievement for a Children's book (6 chapters), two for Young Adults (12)
+and three for Adults (20). The rate is derived from the book lengths rather than chosen
+in the abstract: it was one per ten when books were 10 / 20 / 30, and moved to one per
+six with them, so the per-book haul the design was tuned for survives the change.
+`MIN_CHAPTERS_BETWEEN_ACHIEVEMENTS` tracks it at roughly 60%, now 3.
 
 Expect real pacing variance here — it's the accepted cost of the model deciding. If it
 turns out too noisy in practice, the client-gated variant is a small change.
