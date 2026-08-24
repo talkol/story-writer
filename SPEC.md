@@ -19,7 +19,7 @@ browser; no backend.
 | Generation UX | Single streaming call; prose renders as it arrives |
 | Pagination | Measured reflow against the live container |
 | iPad | Two-page spread in landscape, single page in portrait |
-| Story length | Audience-driven: Children 10 chapters, Young Adults 20, Adults 30 |
+| Story length | Audience-driven: Children 6 chapters, Young Adults 12, Adults 20 |
 | Chapter length | Audience-driven: ~250 / ~500 / ~800 words |
 | Achievements | The AI decides when one is earned |
 | Genre editing | Editable mid-story from the Read screen; affects future parts only |
@@ -194,7 +194,7 @@ subtitles were dropped, and with them `SheetItem.note`, which nothing else used.
 
 - Title "Library", styled after iOS Books.
 - 2-column grid of covers at 2:3 portrait. Below each: a chapter-progress caption
-  ("Chapter 3 of 20", "30 chapters" before it starts, "20 chapters · Complete" when
+  ("Chapter 3 of 12", "20 chapters" before it starts, "12 chapters · Complete" when
   finished) and a "…" button opening a menu with **Export PDF** and **Remove**
   (Remove confirms first — it is irreversible and there is no cloud copy).
 - **Titles are not shown in the grid.** The cover carries the book's identity, as in
@@ -222,7 +222,7 @@ Two modes, same component:
   Pills are a `radiogroup`, not a row of toggles, so arrow keys move between options
   and the group is announced as one choice.
   Audience additionally sets `totalChapters` and part length — show that inline:
-  *"Children — a short book, 10 chapters."*
+  *"Children — a short book, 6 chapters."*
 - **Edit mode** (from the Read screen) — same pills, prefilled from the story.
   Audience is editable but does **not** change `totalChapters` on an in-progress story
   (that would strand the reader mid-arc); show a note saying so. Confirm button reads
@@ -457,7 +457,7 @@ length do not.
 
 `generateTitle` is given the genre, the setting, the audience with its length profile,
 and the audience's language level — *"Invent a title for an adventure book set in a
-nature world, written for children (a short book, 10 chapters). … Use only plain words a
+nature world, written for children (a short book, 6 chapters). … Use only plain words a
 five-year-old knows. Nothing abstract and nothing figurative — a title a young child
 could picture."*
 
@@ -568,8 +568,12 @@ Both numbers live in `prompts.ts` as `ACHIEVEMENT_EVERY_CHAPTERS` and
 the guard must agree and two files is how they drift.
 
 **The rate is uniform across audiences**, so chapter count decides the total: roughly
-one achievement for a Children's book (10 chapters), two for Young Adults (20), three
-for Adults (30). A Children's book may legitimately finish with none.
+roughly 0.6 achievements for a Children's book (6 chapters), 1.2 for Young Adults (12)
+and 2 for Adults (20). A Children's book will therefore often finish with none — the
+rate stayed at one per ten while the books were shortened, so rarity now bites hardest
+on the shortest book. `MIN_CHAPTERS_BETWEEN_ACHIEVEMENTS` is 6, which is the entire
+length of a Children's book, so such a book can hold at most one by construction. Lower
+the rate to about six if an achievement per book matters more than rarity.
 
 Expect real pacing variance here — it's the accepted cost of the model deciding. If it
 turns out too noisy in practice, the client-gated variant is a small change.
@@ -943,8 +947,8 @@ Measured behaviour worth keeping in mind:
 - **Key exposure.** A browser-held OpenAI key is readable by anything running in this
   origin and by anyone with the device. Acceptable for a personal app; document it in
   Settings, recommend a spend-limited key. If this ever ships publicly, it needs a proxy.
-- **Long-story continuity.** Even a 1000-word rolling summary across 30 chapters will
-  lose detail. If drift shows up in testing, add a persistent "story bible" field
+- **Long-story continuity.** Even a 1000-word rolling summary across a 20-chapter book
+  will lose detail. If drift shows up in testing, add a persistent "story bible" field
   (characters, places, established facts) that the model appends to rather than
   rewrites.
 - **The summary is a request, not a cap.** The prompt asks for under 1000 words but

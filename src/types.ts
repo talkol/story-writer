@@ -38,9 +38,9 @@ export const AUDIENCE_PROFILE: Record<
   Audience,
   { totalChapters: number; wordsPerChapter: number; label: string }
 > = {
-  Children: { totalChapters: 10, wordsPerChapter: 250, label: 'a short book, 10 chapters' },
-  'Young Adults': { totalChapters: 20, wordsPerChapter: 500, label: 'a full book, 20 chapters' },
-  Adults: { totalChapters: 30, wordsPerChapter: 800, label: 'a long book, 30 chapters' },
+  Children: { totalChapters: 6, wordsPerChapter: 250, label: 'a short book, 6 chapters' },
+  'Young Adults': { totalChapters: 12, wordsPerChapter: 500, label: 'a full book, 12 chapters' },
+  Adults: { totalChapters: 20, wordsPerChapter: 800, label: 'a long book, 20 chapters' },
 };
 
 export interface Achievement {

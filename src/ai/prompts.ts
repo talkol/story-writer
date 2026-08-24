@@ -13,8 +13,12 @@ export const META_DELIMITER = '===META===';
  * given to the model, and the guard that rejects what it returns. Splitting them across
  * files is how they drift.
  *
- * At one per ten chapters a Children's book earns roughly one, Young Adults two, and
- * Adults three — rare enough that an achievement means something.
+ * At one per ten chapters, and with books of 6 / 12 / 20 chapters, the expected haul is
+ * roughly 0.6 for a Children's book, 1.2 for Young Adults and 2 for Adults — so a
+ * Children's book will often finish with none at all. That is a consequence of the
+ * shorter book lengths, not a separate decision: the rate stayed at ten while the books
+ * got shorter. Lower it to about six if an achievement per book matters more than
+ * rarity.
  */
 export const ACHIEVEMENT_EVERY_CHAPTERS = 10;
 
@@ -22,6 +26,9 @@ export const ACHIEVEMENT_EVERY_CHAPTERS = 10;
  * Hard floor enforced client-side. The model decides *whether* a chapter earned an
  * achievement; this only stops them clustering. Set below the target so ordinary
  * variance is allowed and only runaway pacing is refused.
+ *
+ * Note this now equals the whole length of a Children's book, so such a book can hold
+ * at most one achievement by construction.
  */
 export const MIN_CHAPTERS_BETWEEN_ACHIEVEMENTS = 6;
 
