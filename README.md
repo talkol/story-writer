@@ -172,9 +172,31 @@ absolute path unless you also stop deploying to subdirectories.
 directory to `dist`. This is the standard Vite setup on Netlify, Vercel, and
 Cloudflare Pages; none of them need a framework preset beyond Vite.
 
-**GitHub Pages** — push `dist/` to a `gh-pages` branch, or add a workflow that builds
-and uploads it. The relative `base` means a project site at
-`https://you.github.io/story-writer/` works without further configuration.
+**GitHub Pages** — already configured. [.github/workflows/deploy.yml](.github/workflows/deploy.yml)
+builds on every push to `main` and publishes via the official Pages actions; you can also
+re-deploy from the Actions tab without a commit. Two files in `public/` reach the site
+root: `CNAME` (the custom domain, `reading.land`) and `.nojekyll` (stops Jekyll
+processing the output).
+
+One-time setup in the repo: **Settings → Pages → Source: GitHub Actions**, then set the
+custom domain and enable **Enforce HTTPS** once it appears.
+
+DNS for the apex domain:
+
+| Type | Value |
+|---|---|
+| A | 185.199.108.153 |
+| A | 185.199.109.153 |
+| A | 185.199.110.153 |
+| A | 185.199.111.153 |
+| AAAA | 2606:50c0:8000::153 |
+| AAAA | 2606:50c0:8001::153 |
+| AAAA | 2606:50c0:8002::153 |
+| AAAA | 2606:50c0:8003::153 |
+
+**HTTPS is not optional.** `crypto.randomUUID` and anything else gated on a secure
+context is undefined over plain http — see the LAN-address note above. The app has a
+fallback for id generation, but serve the site over HTTPS regardless.
 
 **Any web server** — copy `dist/` anywhere it will be served over HTTP. Note that
 opening `dist/index.html` directly from the filesystem will *not* work: the bundle
