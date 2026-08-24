@@ -273,8 +273,23 @@ partial part.
 **Create a story**
 1. Library → Create New → (key check) → Genre (creation mode) → Confirm.
 2. Create the `Story` record with `status: 'draft'`.
-3. Fire the part-1 generation and the cover generation **in parallel**; navigate
+3. Fire the chapter-one generation and the naming/cover job **in parallel**; navigate
    straight to Read so the reader is never staring at a blank screen.
+4. **The title is the waiting screen.** It arrives from its own short call a couple of
+   seconds before the first prose token, so the reader sees "Thinking of a title…",
+   then the book's name set large, then the prose begins under it. The name also
+   replaces "Read" in the navigation bar for as long as chapter one is being written —
+   the bar is fixed-height and outside the stage, so unlike a banner it cannot shrink
+   the page and re-paginate mid-write.
+   - **The title holds for a minimum of four seconds.** The gap between the title and
+     the first token varies with how fast the model responds, and without a floor the
+     moment can be over before it registers.
+   - It is an **overlay** over the reader, not a sibling of it. The first page mounts
+     and paginates underneath while the title is still showing, so when the hold ends
+     the prose is already laid out and simply appears. Measured live: title at 2.1s,
+     page ready at 4.2s, title cleared at 6.0s.
+   - The hold only starts if the title arrives **before** any prose is on screen. A
+     title that lands late must never cover a page the reader has begun reading.
 4. Title comes from the part-1 response. Until it arrives, the library tile reads
    "Untitled Story".
 
@@ -436,6 +451,9 @@ retried days later. `Story.coverJob` holds `attempts`, `nextAttemptAt`, `tier`,
   between jobs (the reconciler re-runs on every store change, and finishing a job
   changes the store — without pacing, twenty cover-less stories fire twenty requests
   back to back), and a `leaseUntil` so two open tabs do not generate the same cover.
+  The gap is set when a job *starts real work*, never by a pass that found nothing to
+  do: an idle tick that pushed the gap forward swallowed the kick from creating a story,
+  leaving a new book unnamed until the next 60-second tick.
   A manual **Retry cover** bypasses the pacing gap; deferring a deliberate tap by
   several seconds reads as a dead button.
 - Saving an API key clears every backoff, since a missing key is the most common reason

@@ -100,7 +100,12 @@ body {
 .nav {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  /*
+   * Sides size to their buttons; the title takes what is left and truncates. With
+   * `1fr auto 1fr` the middle column grew to fit its content, so a long book title
+   * pushed the trophy and settings buttons out of position instead of ellipsising.
+   */
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   height: var(--nav-h);
@@ -128,6 +133,7 @@ body {
 
 .nav__title {
   margin: 0;
+  min-width: 0;
   font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.022em;
@@ -1647,4 +1653,61 @@ body {
   gap: 8px;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+/* ---- The opening moment: a new book announcing itself ------------------- */
+
+/*
+ * An overlay rather than a sibling of the page. The first page is measured and mounted
+ * underneath while the title is still showing, so when the hold ends the prose is
+ * already laid out and appears instantly instead of paginating in front of the reader.
+ */
+.reader__opening {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 var(--gutter);
+  animation: opening-in 500ms ease both;
+}
+
+.reader__opening > * {
+  max-width: 320px;
+}
+
+.reader__opening-label {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--label-3);
+  margin: 0 0 14px;
+}
+
+.reader__opening-title {
+  font-family: var(--font-serif);
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--label);
+  margin: 0;
+}
+
+.reader__opening-status {
+  font-size: 14px;
+  color: var(--label-2);
+  margin: 22px 0 0;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes opening-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }

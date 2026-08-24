@@ -18,6 +18,15 @@ import { chapterCount, type Chapter, type Story } from '../types';
 const TURN_MS = 380;
 
 /**
+ * How long a new book's title stays on screen once it appears.
+ *
+ * The title arrives about a second before the first prose token, so without a floor the
+ * moment can be over before it registers — and the gap varies with how fast the model
+ * responds. Holding it makes the opening consistent rather than a flicker.
+ */
+const MIN_TITLE_MS = 4000;
+
+/**
  * With reduced motion the leaf is faded out instantly by CSS, so holding the turn open
  * for its full duration would just be a third of a second of ignored taps with nothing
  * on screen to explain the wait.
@@ -184,6 +193,29 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
     [page, step, lastPage, turn, canChoose, navigate, storyId],
   );
 
+  const hasTitle = Boolean(story?.title);
+  const noPagesYet = pages.length === 0;
+  const holdTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (titleSeenAtRef.current !== null) return;
+    // Only claim the screen if nothing is being read yet.
+    if (!hasTitle || !noPagesYet) return;
+
+    titleSeenAtRef.current = Date.now();
+    // Deliberately not cleaned up on dependency change. `noPagesYet` flips the moment
+    // the first page mounts, and a cleanup here cancelled the hold timer at exactly
+    // that point — so it never fired and the title stayed up until generation ended.
+    holdTimerRef.current = window.setTimeout(() => setTitleHoldDone(true), MIN_TITLE_MS);
+  }, [hasTitle, noPagesYet]);
+
+  useEffect(
+    () => () => {
+      if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
+    },
+    [],
+  );
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'ArrowRight') go('forward');
@@ -195,6 +227,8 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
 
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const jumpToChapterRef = useRef<number | null>(null);
+  const titleSeenAtRef = useRef<number | null>(null);
+  const [titleHoldDone, setTitleHoldDone] = useState(false);
   const location = useLocation();
   const handoff = location.state as { chosenAction?: string; afterChapters?: number } | null;
   const chosenAction = handoff?.chosenAction;
@@ -263,6 +297,17 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
 
   const visiblePage = turn ? turn.to : page;
 
+  /**
+   * The opening moment: a brand-new book being written for the first time.
+   *
+   * The title covers the page for at least MIN_TITLE_MS once it appears. The hold only
+   * starts if the title arrives *before* any prose is on screen — a title that lands
+   * late must not cover a page the reader has already started reading.
+   */
+  const openingPhase = isWriting && chapterCount(story) === 0;
+  const showOpening =
+    openingPhase && (pages.length === 0 || (titleSeenAtRef.current !== null && !titleHoldDone));
+
   // The choices are offered only once the reader has actually reached the end of what
   // has been written — the point the spec calls "the last generated page".
   const onLastPage = pages.length > 0 && visiblePage + step >= pages.length;
@@ -278,7 +323,9 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
     <>
       <div className={`reader${chromeHidden ? ' reader--immersive' : ''}`}>
         <NavBar
-          title="Read"
+          // Naming the book in the bar while chapter one streams costs no layout —
+          // a banner over the stage would shrink it and re-paginate mid-write.
+          title={isWriting && chapterCount(story) === 0 && story.title ? story.title : 'Read'}
           left={<BackButton label="Library" onClick={() => navigate('/library')} />}
           right={
             <>
@@ -384,9 +431,19 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
             </div>
           )}
 
-          {pages.length === 0 && gen.state.status === 'writing' && (
-            <div className="reader__empty">
-              <p className="reader__thinking">Thinking of an opening…</p>
+          {showOpening && (
+            <div className="reader__opening">
+              {story.title ? (
+                <>
+                  {/* The title is named by its own call and usually lands before the
+                      prose does. Showing it turns the wait into the book arriving. */}
+                  <p className="reader__opening-label">A new book</p>
+                  <h2 className="reader__opening-title">{story.title}</h2>
+                  <p className="reader__opening-status">Writing chapter one…</p>
+                </>
+              ) : (
+                <p className="reader__thinking">Thinking of a title…</p>
+              )}
             </div>
           )}
           </div>

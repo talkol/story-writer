@@ -236,9 +236,12 @@ function tick(): Promise<void> {
   if (running) return running;
   const run = runOnce();
   running = run;
+  // The pacing gap is set by `attemptCover` when work actually happens, not here. A
+  // no-op pass that found nothing to do must not push the gap forward: doing so meant
+  // a story created moments after an idle tick waited out the full 60-second interval
+  // before it was even named.
   void run.finally(() => {
     running = null;
-    nextRunAfter = Date.now() + MIN_GAP_MS;
   });
   return run;
 }
@@ -269,6 +272,8 @@ async function attemptCover(
 ): Promise<{ ok: boolean; message: string }> {
   const now = Date.now();
   const job = coverJobOf(story);
+  // Real work is starting, so the next job waits for the gap.
+  nextRunAfter = now + MIN_GAP_MS;
 
   try {
     // Inside the try: a throw here (a full disk, say) would otherwise leave the job
