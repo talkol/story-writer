@@ -208,6 +208,8 @@ body {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* Stops a scroll that reaches the end from chaining into the page behind it. */
+  overscroll-behavior: contain;
 }
 
 .screen--fixed {
@@ -871,11 +873,18 @@ body {
   display: flex;
   padding: 0;
   overflow: hidden;
-  /* The reader is a paged surface: no scrolling, no rubber-banding. */
-  touch-action: pan-y;
+  /*
+   * The reader is a paged surface. `pinch-zoom` allows the accessibility gesture but
+   * blocks panning — `pan-y` let iOS rubber-band a surface that never scrolls, which
+   * made the page appear to peel away from the chrome on every vertical drag.
+   */
+  touch-action: pinch-zoom;
+  overscroll-behavior: contain;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
+  /* Long-pressing a tap zone should turn the page, not offer to copy the paragraph. */
+  -webkit-touch-callout: none;
 }
 
 .stage__inner {
@@ -1440,6 +1449,7 @@ body {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 4px var(--gutter) 20px;
 }
 
@@ -1594,4 +1604,47 @@ body {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ---- Crash screen -------------------------------------------------------- */
+
+.crash {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 18vh var(--gutter) var(--gutter);
+  text-align: center;
+}
+
+.crash__title {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin: 0 0 12px;
+  color: var(--label);
+}
+
+.crash__body {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--label-2);
+  margin: 0 0 16px;
+}
+
+.crash__detail {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--label-3);
+  background: var(--fill-quaternary);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin: 0 0 20px;
+  word-break: break-word;
+}
+
+.crash__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
 }

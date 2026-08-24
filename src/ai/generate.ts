@@ -1,3 +1,4 @@
+import { StorageFullError } from '../storage/quota';
 import { newId, updateStory } from '../storage/stories';
 import { chapterCount, type Achievement, type Story } from '../types';
 import { displayableProse, MetaFormatError, parseMeta, splitOnDelimiter, type ChapterMeta } from './parse';
@@ -218,6 +219,9 @@ function acceptAchievement(
 
 /** Turns any thrown value into something worth showing a reader. */
 export function describeGenerationError(err: unknown): string {
+  // A chapter that cannot be saved is not a network problem, and telling the reader to
+  // "try again" would loop them straight back into the same full disk.
+  if (err instanceof StorageFullError) return err.message;
   // Only reachable from a repair attempt now; a first pass keeps the prose instead.
   if (err instanceof MetaFormatError) {
     return `${err.message} Try again.`;

@@ -640,8 +640,7 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
    degradation, downscale, IndexedDB, placeholder and manual retry.
 9. ~~**PDF export**~~ — *done.* A5 book, cover page, title page, chapters, achievement
    inserts, closing page and achievement index, with jsPDF loaded on demand.
-10. **Polish** — reduced motion, resume position, quota handling, offline, iOS Safari
-    pass (100dvh, safe-area insets, no rubber-band scroll on the reader).
+10. ~~**Polish**~~ — *done.* See §12.
 
 ---
 
@@ -655,6 +654,35 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
   check; `crypto.subtle` is likewise secure-context only.
 - Related: the reader's own testing path is a LAN address, so any browser API gated on
   a secure context will fail there while working perfectly on `localhost`.
+
+## 12. Polish notes
+
+- **Theme colour follows the scheme.** Two `theme-color` metas, matched to `--bg` in
+  light and dark, plus `color-scheme`. The single tag was still the cream from the
+  pre-Apple-Books palette, so the iOS status bar disagreed with the page.
+- **Zoom is not disabled.** `user-scalable=no, maximum-scale=1` was removed: pinch-zoom
+  is an accessibility affordance, blocking it is hostile, and modern iOS ignores it
+  anyway. The reader has its own text-size control on top.
+- **No rubber-band in the reader.** The stage was `touch-action: pan-y`, which let iOS
+  rubber-band a surface that never scrolls — the page appeared to peel away from the
+  chrome on any vertical drag. Now `pinch-zoom`, which permits the accessibility gesture
+  and nothing else, with `overscroll-behavior: contain` on every scrollable region so a
+  scroll that reaches its end does not chain into the page behind it.
+  `-webkit-touch-callout: none` stops a long-press on a tap zone offering to copy the
+  paragraph.
+- **Reduced motion turns pages instantly.** The global rule already collapsed the
+  animation, but the reader still held the turn open for its full 380ms and ignored taps
+  throughout — a third of a second of dead input with nothing on screen explaining it.
+  The duration is now 0 under `prefers-reduced-motion`, committing the page immediately.
+- **Failures are named, not generalised.** Storage-full and offline are reported as
+  themselves rather than as "something went wrong" — telling someone to retry into a
+  full disk or a dead connection just loops them.
+- **An error boundary.** Without one a render error unmounts the tree and leaves a blank
+  page, with the stories intact in storage but unreachable and nothing to indicate a
+  problem. The fallback says the stories are safe, shows the message, and offers
+  recovery. Note the ordering: it navigates *before* clearing the error, because
+  clearing first re-renders the route that just threw and lands straight back in the
+  fallback.
 
 ## 11. Open risks
 

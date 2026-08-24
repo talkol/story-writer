@@ -2,13 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"
-    />
+    <!--
+      viewport-fit=cover lets the app paint into the safe areas, which the CSS then
+      insets. Zoom is deliberately NOT disabled: the reader has its own text-size
+      control, but pinch-zoom is an accessibility affordance and blocking it is both
+      hostile and ignored by modern iOS anyway.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Story" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="theme-color" content="#f7f3ec" />
+    <!-- Matches --bg in each scheme, so the status bar and browser chrome agree
+         with the page instead of showing a stale colour. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="An AI-written choose-your-own-adventure story maker." />
     <title>Story App</title>
   </head>
   <body>

@@ -41,6 +41,15 @@ export function useGeneration(story: Story | undefined) {
         setState({ status: 'error', message: 'No API key. Add one in Settings to write.' });
         return;
       }
+      // Checked up front so the reader gets the real reason rather than a fetch
+      // failure dressed up as an OpenAI outage.
+      if (!navigator.onLine) {
+        setState({
+          status: 'error',
+          message: 'You are offline. Chapters are written by OpenAI, so this needs a connection.',
+        });
+        return;
+      }
 
       runningRef.current = true;
       cancelledByUserRef.current = false;
@@ -78,6 +87,10 @@ export function useGeneration(story: Story | undefined) {
     const apiKey = loadSettings().apiKey;
     if (!apiKey) {
       setState({ status: 'error', message: 'No API key. Add one in Settings to write.' });
+      return;
+    }
+    if (!navigator.onLine) {
+      setState({ status: 'error', message: 'You are offline. This needs a connection.' });
       return;
     }
 

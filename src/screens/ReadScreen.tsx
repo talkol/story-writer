@@ -17,6 +17,15 @@ import { chapterCount, type Chapter, type Story } from '../types';
 
 const TURN_MS = 380;
 
+/**
+ * With reduced motion the leaf is faded out instantly by CSS, so holding the turn open
+ * for its full duration would just be a third of a second of ignored taps with nothing
+ * on screen to explain the wait.
+ */
+function turnDuration(): number {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : TURN_MS;
+}
+
 type Turn = { from: number; to: number; direction: 'forward' | 'back' } | null;
 
 export default function ReadScreen({ showAchievements = false }: { showAchievements?: boolean }) {
@@ -161,11 +170,16 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
         return;
       }
       if (next < 0 || next > lastPage) return;
+      const duration = turnDuration();
+      if (duration === 0) {
+        setPage(next);
+        return;
+      }
       setTurn({ from: page, to: next, direction });
       window.setTimeout(() => {
         setPage(next);
         setTurn(null);
-      }, TURN_MS);
+      }, duration);
     },
     [page, step, lastPage, turn, canChoose, navigate, storyId],
   );

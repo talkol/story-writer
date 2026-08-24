@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import App from './App';
+import ErrorBoundary from './components/ErrorBoundary';
 import './icons.css';
 import './styles.css';
 
@@ -17,7 +18,9 @@ if (import.meta.env.DEV) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </HashRouter>
   </StrictMode>,
 );
