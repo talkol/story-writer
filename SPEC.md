@@ -14,7 +14,7 @@ browser; no backend.
 | Stack | React + Vite + TypeScript, static build |
 | Storage | Browser-local (localStorage + IndexedDB), no server |
 | AI provider | OpenAI, user-supplied API key stored locally |
-| Text model | `gpt-5` |
+| Text model | `gpt-5.5` |
 | Cover images | AI-generated (`gpt-image-2` at `medium`), lettered by the model |
 | Generation UX | Single streaming call; prose renders as it arrives |
 | Pagination | Measured reflow against the live container |
@@ -301,7 +301,7 @@ Bearer <key>`, called directly from the browser (OpenAI serves permissive CORS).
 the SSE stream manually with `fetch` + `ReadableStream` — do not pull in the SDK just
 to set `dangerouslyAllowBrowser`.
 
-Because `gpt-5` is a reasoning model, time-to-first-token is dominated by reasoning.
+Because these are reasoning models, time-to-first-token is dominated by reasoning.
 Set reasoning effort to its lowest useful setting for this task so prose starts flowing
 quickly; creative writing gains little from heavy reasoning here.
 
@@ -720,7 +720,15 @@ Measured behaviour worth keeping in mind:
 - **The summary self-regulated.** It ranged 232–435 words against the 500-word request
   and never exceeded it, so the uncapped-summary risk did not materialise here. Still
   unguarded, though.
-- **Chapter latency was 17–27s** with `reasoning_effort: low`.
+- **Chapter latency was 17–27s** on `gpt-5` with `reasoning_effort: low`.
+- **Model choice measurably changes adherence.** Head to head on the same Children's
+  chapter-one prompt: `gpt-5` averaged 11.3-word sentences and ran 13% over the word
+  target, reaching for abstract similes the Children's rules exclude; `gpt-5.5` averaged
+  6.8 words, ran 6% over, and used roughly half the output tokens; `gpt-5.6-luna`
+  averaged 7.0 words, hit the target exactly, and answered in 5.7s against 16.1s. All
+  three honoured the `===META===` contract and returned valid metadata. Moved to
+  `gpt-5.5`; `gpt-5.6-luna` is worth trying if speed matters more than range, though its
+  prose reads pitched slightly younger.
 - **Cover misspelling was a quality setting, not the model.** The first cover rendered
   "AND TIE SKYBRIDGE" for "AND THE SKYBRIDGE". A controlled comparison on the same
   prompt showed `gpt-image-1` at `medium` spells it correctly, and `gpt-image-2` spells
