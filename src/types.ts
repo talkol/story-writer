@@ -103,7 +103,7 @@ export interface Story {
   achievements: Achievement[];
   /** The 4 choices awaiting the reader. Empty when generating or finished. */
   pendingActions: string[];
-  /** Rolling plot summary, ~200 words, rewritten by the model each part. */
+  /** Rolling plot summary, ~500 words, rewritten by the model each chapter. */
   summary: string;
   status: StoryStatus;
   readingPosition: ReadingPosition;

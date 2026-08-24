@@ -104,15 +104,20 @@ export function buildSystemPrompt(story: Story, ctx: ChapterContext): string {
         ? 'None has been awarded yet.'
         : `It has been ${ctx.chaptersSinceLastAchievement} chapter(s) since the last one.`
     } Award one only for a distinctive turn, and no more often than roughly every 5 chapters.`,
-    '  "summary": "the whole plot so far in under 200 words, rewritten to include this chapter"',
+    '  "summary": "the whole plot so far in under 500 words, rewritten to include this chapter. Keep the characters, places and established facts that later chapters will need to stay consistent with"',
     '}',
   );
 
   return lines.join('\n');
 }
 
-/** Last N words of prose, for voice and immediate continuity. */
-export function recentProse(story: Story, words = 400): string {
+/**
+ * Last N words of prose, for voice and immediate continuity.
+ *
+ * Taken from the whole book rather than the last chapter, so the window spans chapter
+ * boundaries. Achievement pages are filtered out, so an interlude does not eat into it.
+ */
+export function recentProse(story: Story, words = 1000): string {
   const prose = story.chapters
     .filter((c): c is Extract<Chapter, { kind: 'prose' }> => c.kind === 'prose')
     .map((c) => c.text)

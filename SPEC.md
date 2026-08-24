@@ -108,7 +108,7 @@ interface Story {
   chapters: Chapter[];
   achievements: Achievement[];
   pendingActions: string[];         // the 4 choices awaiting the reader; [] when finished
-  summary: string;                  // rolling plot summary, ~200 words, AI-maintained
+  summary: string;                  // rolling plot summary, ~500 words, AI-maintained
   status: 'draft' | 'reading' | 'finished';
   /** Resume anchor. A page number would break on rotate or font-size change. */
   readingPosition: { chapterIndex: number; wordOffset: number };
@@ -334,8 +334,9 @@ fragility of partial-JSON parsing:
 
 ### 6.3 Prompt inputs
 Every generation sends:
-1. Rolling plot summary (capped ~200 words; the model rewrites it each part).
-2. The last ~400 words of prose verbatim, for voice and immediate continuity.
+1. Rolling plot summary (~500 words; the model rewrites it each chapter).
+2. The last ~1000 words of prose verbatim, for voice and immediate continuity. Taken
+   from the whole book, not the last chapter, so the window spans chapter boundaries.
 3. Audience, genre, setting — plus a flag if they were just changed.
 4. The full achievement list for this story (titles + descriptions), so it doesn't
    repeat one.
@@ -369,7 +370,7 @@ After the prose, on its own line, output ===META=== followed by a single JSON ob
    could take next, meaningfully divergent from one another],
   "achievement": null, or {"title": 2-3 words, "description": one sentence} if the
    reader's last choice or this chapter earned a genuine milestone,
-  "summary": the full plot so far in under 200 words, rewritten to include this
+  "summary": the full plot so far in under 500 words, rewritten to include this
    chapter }
 ```
 
@@ -622,7 +623,7 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
    menu, remove with confirmation that also deletes the cover blob, empty state,
    key entry with a live `GET /v1/models` test, and a no-key redirect from Create New.
 3. ~~**Genre + creation**~~ — *done.* Pill selectors as accessible radiogroups, both
-   modes, audience hint showing chapter count and part length, chapter count locked on
+   modes, audience hint showing chapter count and chapter length, chapter count locked on
    started stories, mid-story shift warning that sets `genreChangedAtChapter`, and real
    story-record creation wired to Library → Create New.
 4. ~~**Read + pagination**~~ — *done.* Line-grid pagination, tap zones, swipe, arrow
@@ -638,8 +639,9 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
    reader (4) and the pacing guard with generation (5).
 8. ~~**Covers**~~ — *done.* Image generation as a self-healing background job, prompt
    degradation, downscale, IndexedDB, placeholder and manual retry.
-9. ~~**PDF export**~~ — *done.* A5 book, cover page, title page, chapters, achievement
-   inserts, closing page and achievement index, with jsPDF loaded on demand.
+9. ~~**PDF export**~~ — *done.* B-format paperback (129×198mm) set in embedded
+   Literata: cover page, title page, chapters, achievement inserts, closing page and
+   achievement index, with jsPDF loaded on demand.
 10. ~~**Polish**~~ — *done.* See §12.
 
 ---
@@ -689,9 +691,14 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
 - **Key exposure.** A browser-held OpenAI key is readable by anything running in this
   origin and by anyone with the device. Acceptable for a personal app; document it in
   Settings, recommend a spend-limited key. If this ever ships publicly, it needs a proxy.
-- **Long-story continuity.** A 200-word rolling summary across 30 chapters will lose
-  detail. If drift shows up in testing, add a persistent "story bible" field (characters,
-  places, established facts) that the model appends to rather than rewrites.
+- **Long-story continuity.** Even a 500-word rolling summary across 30 chapters will
+  lose detail. If drift shows up in testing, add a persistent "story bible" field
+  (characters, places, established facts) that the model appends to rather than
+  rewrites.
+- **The summary is a request, not a cap.** The prompt asks for under 500 words but
+  nothing truncates what comes back. A model that drifts to 900-word summaries grows
+  every subsequent prompt with no error and no signal — gradual cost creep rather than a
+  failure. The prose window, by contrast, is hard-sliced.
 - **Achievement pacing**, per §6.5.
 - **Streaming on iOS Safari.** Verify `fetch` streaming behaves in a home-screen PWA
   context early — it's the one platform detail most likely to surprise.
