@@ -1,5 +1,6 @@
 import { describeApiError, OPENAI_BASE } from './client';
 import { ApiError, TEXT_MODEL } from './stream';
+import { TITLE_REGISTER } from './prompts';
 import { AUDIENCE_PROFILE, type Story } from '../types';
 
 /**
@@ -22,9 +23,13 @@ export async function generateTitle(opts: {
   const profile = AUDIENCE_PROFILE[story.audience];
 
   const prompt =
-    `Invent a title for a ${story.genre.toLowerCase()} book set in a ${story.setting.toLowerCase()} world, ` +
+    `Invent a title for ${article(story.genre)} ${story.genre.toLowerCase()} book set in ` +
+    `${article(story.setting)} ${story.setting.toLowerCase()} world, ` +
     `written for ${story.audience.toLowerCase()} (${profile.label}).\n\n` +
     `Reply with the title and nothing else. Two to six words. Evocative and concrete. ` +
+    // The title call cannot see the chapter prompt's STYLE block, so the audience's
+    // language level has to be restated here or the title drifts above the prose.
+    `${TITLE_REGISTER[story.audience]} ` +
     `No subtitle, no quotation marks, no explanation, no trailing punctuation.`;
 
   let res: Response;
@@ -64,4 +69,15 @@ export function cleanTitle(raw: string): string {
     .replace(/^(title|the title is)\s*[:\-—]\s*/i, '')
     .trim()
     .slice(0, 80);
+}
+
+/**
+ * "a" or "an" for a genre or setting name.
+ *
+ * A plain vowel test, which is safe only because both lists are closed and contain no
+ * word where spelling and sound disagree — no "hour", no "university". Adding such a
+ * word to GENRES or SETTINGS would need this revisited.
+ */
+function article(word: string): string {
+  return /^[aeiou]/i.test(word) ? 'an' : 'a';
 }

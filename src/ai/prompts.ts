@@ -70,21 +70,27 @@ export function buildContext(story: Story, forLastChapter = false): ChapterConte
  * reading age, an average sentence length and a rule for unfamiliar words do not. The
  * live run showed the model follows these closely, so specificity here is worth more
  * than anywhere else in the prompt.
+ *
+ * The reading age is the strongest lever of the set — it moves vocabulary, syntax and
+ * imagery together, in a way that tightening any single rule does not.
  */
 const STYLE: Record<Audience, string[]> = {
   Children: [
-    'Write for a child of about seven, reading along with an adult.',
-    'Vocabulary: everyday words a young child already knows. If the story genuinely needs an unfamiliar word, make its meaning plain from the sentence around it — never stop to define it.',
-    'Sentences: one idea each, around ten words on average, rarely more than a single subordinate clause. Vary the rhythm so it does not become sing-song.',
-    'Paragraphs: two to four sentences.',
+    'Write for a child of about five, listening to an adult read it aloud.',
+    'Vocabulary: only everyday words a five-year-old already uses. Prefer the short, plain word over the precise one. If a word might be new, choose a simpler one instead — do not use it and then explain it.',
+    'Sentences: one idea each, around eight words, and simple. Avoid subordinate clauses; where you would use one, write two short sentences instead. Vary the rhythm so it does not become sing-song.',
+    'Paragraphs: two or three short sentences.',
+    'Active voice and concrete nouns. Avoid abstract words for feelings and ideas — show them through what a character does.',
+    'Repetition is a feature here, not a fault: repeat names, phrases and patterns the way a picture book does.',
     'Concrete and sensory throughout. No irony, no sarcasm, and no metaphor that needs unpacking to follow the plot.',
     'Dialogue: short lines, plainly attributed ("she said", "said the baker"), one speaker per paragraph.',
     'Nothing violent or frightening. Kindness and curiosity carry the plot.',
+    'The four choices you offer must be written in this same simple language — they are read by the same child.',
   ],
   'Young Adults': [
     'Write for a reader of about fourteen.',
     'Vocabulary: rich and current, and never talked down to. Precise words are welcome; archaic or academic register is not, unless a character speaks that way.',
-    'Sentences: vary the length deliberately. Complex constructions are fine, but keep the momentum — a long sentence should earn its length.',
+    'Sentences: around fourteen words on average, and simple in construction. Avoid complex sentences — at most one subordinate clause, and never a sentence that has to be read twice to parse. Vary the length so the rhythm does not go flat; a long sentence should be rare and earn its length.',
     'Paragraphs: short enough to keep the page moving.',
     'Interiority matters: what the protagonist notices, fears and wants should be legible without being announced.',
     'Real stakes and real consequences. Subtext is welcome; ambiguity in small doses.',
@@ -96,6 +102,24 @@ const STYLE: Record<Audience, string[]> = {
     'Mature themes handled with craft rather than shock. Imply more than you state.',
     'Subtext, ambiguity and unreliable impressions are all permitted.',
   ],
+};
+
+/**
+ * The language brief for a *title*, per audience — one line, condensed from the
+ * vocabulary rules in STYLE above.
+ *
+ * It lives here, next to STYLE, on purpose. `generateTitle` runs as its own call before
+ * any prose exists and so never sees the chapter prompt; keeping its register in the
+ * other file is how the two drift apart, leaving a book written for a five-year-old
+ * sitting under a title pitched at an adult.
+ */
+export const TITLE_REGISTER: Record<Audience, string> = {
+  Children:
+    'Use only plain words a five-year-old knows. Nothing abstract and nothing figurative — a title a young child could picture.',
+  'Young Adults':
+    'Vivid and current, and never talked down to. No archaic or academic words.',
+  Adults:
+    'The full literary range is available. Suggest rather than explain.',
 };
 
 export function buildSystemPrompt(story: Story, ctx: ChapterContext): string {

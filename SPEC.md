@@ -427,20 +427,55 @@ STYLE AND LANGUAGE: a per-audience block of concrete constraints, not adjectives
 reading age, an average sentence length, a rule for unfamiliar words and a paragraph
 length do not.
 
-- Children: written for a seven-year-old reading with an adult. Everyday vocabulary,
-  unfamiliar words made plain by context rather than defined, one idea per sentence at
-  roughly ten words, paragraphs of two to four sentences, no irony and no metaphor that
-  needs unpacking, dialogue plainly attributed.
+- Children: written for a **five-year-old** being read to aloud. Only words a
+  five-year-old already uses — an unfamiliar word is replaced, not glossed. One idea per
+  sentence at roughly eight words, subordinate clauses avoided in favour of two short
+  sentences, paragraphs of two or three, active voice and concrete nouns, feelings shown
+  through action rather than named, picture-book repetition encouraged, no irony and no
+  metaphor that needs unpacking, dialogue plainly attributed. The four choices carry the
+  same register, since the same child reads them.
+  - The reading age is the strongest single lever here: it moves vocabulary, syntax and
+    imagery together in a way that tightening any one rule does not. It was lowered from
+    seven to five to make the language simpler across the board.
+  - `generateTitle` runs as its own call and so never sees this block; the audience's
+    language level is restated for it via `TITLE_REGISTER`, so a plain-spoken book does
+    not end up under a title only an adult can read.
+
+`generateTitle` is given the genre, the setting, the audience with its length profile,
+and the audience's language level — *"Invent a title for an adventure book set in a
+nature world, written for children (a short book, 10 chapters). … Use only plain words a
+five-year-old knows. Nothing abstract and nothing figurative — a title a young child
+could picture."*
+
+- The language level comes from `TITLE_REGISTER` in `prompts.ts`, one line per audience
+  condensed from STYLE's vocabulary rules. It lives beside STYLE rather than in
+  `title.ts` because the title call cannot see the chapter prompt, and two copies of the
+  same intent in two files is how they drift.
+- The register must not refer to the story: the title is named *before* any prose
+  exists, so an instruction like "name something concrete from the story" asks for
+  something that is not there yet.
+- Articles are agreed with `article()` rather than hardcoded to "a": two of nine genres
+  and one of ten settings begin with a vowel, so around 30% of books were being
+  described to the model as "a adventure book" or "a urban world".
 - Young Adults: written for a fourteen-year-old and never talked down to. Rich current
-  vocabulary, deliberately varied sentence length, interiority that is legible without
-  being announced, subtext welcome, real consequences, nothing explicit.
+  vocabulary, but **simple construction**: around fourteen words per sentence, at most
+  one subordinate clause, and never a sentence that has to be read twice to parse. Length
+  still varies so the rhythm does not go flat — a long sentence is just rare and has to
+  earn it. Interiority that is legible without being announced, subtext welcome, real
+  consequences, nothing explicit.
+  - Vocabulary and syntax are separate dials here. The register stays rich; only the
+    sentence construction was simplified, so the prose reads easily without reading
+    young.
 - Adults: unconstrained vocabulary and syntax, mature themes by implication rather than
   statement, ambiguity permitted.
 
 Measured on live output for the same genre and setting, changing only the audience:
 average sentence length 6.0 words (Children) against 10.5 (Young Adults), longest
 sentence 12 against 43, and words of nine or more letters 1.4% against 3.5%. The
-constraints demonstrably reach the prose.
+constraints demonstrably reach the prose. Those figures predate the lowering of the
+Children reading age from seven to five, so they are a ceiling on the current output,
+not a description of it — the simplified block has been verified as far as the request
+body on the wire, but not yet measured against live prose.
 
 Continuity: honor the summary and recent prose exactly. Never contradict established
 facts, names, or the protagonist's voice.
