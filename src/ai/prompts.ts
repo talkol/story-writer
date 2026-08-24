@@ -1,6 +1,7 @@
 import {
   AUDIENCE_PROFILE,
   chapterCount,
+  type Audience,
   type Chapter,
   type Story,
 } from '../types';
@@ -45,13 +46,39 @@ export function buildContext(story: Story, forLastChapter = false): ChapterConte
   };
 }
 
-const STYLE: Record<string, string> = {
-  Children:
-    'Simple sentences, warm tone, concrete images. No violence, no frightening imagery. Let kindness and curiosity carry the plot.',
-  'Young Adults':
-    'Vivid and emotionally driven, with real stakes and a distinct narrating voice. No explicit content.',
-  Adults:
-    'The full literary range. Mature themes handled with craft rather than shock. Trust the reader.',
+/**
+ * Per-audience writing rules, given as concrete constraints rather than adjectives.
+ *
+ * "Simple sentences, warm tone" leaves the model to guess what simple means; a stated
+ * reading age, an average sentence length and a rule for unfamiliar words do not. The
+ * live run showed the model follows these closely, so specificity here is worth more
+ * than anywhere else in the prompt.
+ */
+const STYLE: Record<Audience, string[]> = {
+  Children: [
+    'Write for a child of about seven, reading along with an adult.',
+    'Vocabulary: everyday words a young child already knows. If the story genuinely needs an unfamiliar word, make its meaning plain from the sentence around it — never stop to define it.',
+    'Sentences: one idea each, around ten words on average, rarely more than a single subordinate clause. Vary the rhythm so it does not become sing-song.',
+    'Paragraphs: two to four sentences.',
+    'Concrete and sensory throughout. No irony, no sarcasm, and no metaphor that needs unpacking to follow the plot.',
+    'Dialogue: short lines, plainly attributed ("she said", "said the baker"), one speaker per paragraph.',
+    'Nothing violent or frightening. Kindness and curiosity carry the plot.',
+  ],
+  'Young Adults': [
+    'Write for a reader of about fourteen.',
+    'Vocabulary: rich and current, and never talked down to. Precise words are welcome; archaic or academic register is not, unless a character speaks that way.',
+    'Sentences: vary the length deliberately. Complex constructions are fine, but keep the momentum — a long sentence should earn its length.',
+    'Paragraphs: short enough to keep the page moving.',
+    'Interiority matters: what the protagonist notices, fears and wants should be legible without being announced.',
+    'Real stakes and real consequences. Subtext is welcome; ambiguity in small doses.',
+    'No explicit sex, and no gratuitous violence — difficulty and danger are fine when they mean something.',
+  ],
+  Adults: [
+    'The full literary range is available.',
+    'Vocabulary and syntax: unconstrained. Vary sentence length for effect and trust the reader to follow.',
+    'Mature themes handled with craft rather than shock. Imply more than you state.',
+    'Subtext, ambiguity and unreliable impressions are all permitted.',
+  ],
 };
 
 export function buildSystemPrompt(story: Story, ctx: ChapterContext): string {
@@ -83,7 +110,8 @@ export function buildSystemPrompt(story: Story, ctx: ChapterContext): string {
 
   lines.push(
     '',
-    `STYLE: ${STYLE[story.audience]}`,
+    'STYLE AND LANGUAGE:',
+    ...STYLE[story.audience].map((rule) => `- ${rule}`),
     '',
     'CONTINUITY: honour the summary and the recent prose exactly. Never contradict an established fact, name, or voice. Write prose only — no headings, no chapter numbers, no bullet points.',
     '',
