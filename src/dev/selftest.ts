@@ -1,6 +1,11 @@
 import { applyChapter } from '../ai/generate';
 import { displayableProse, MetaFormatError, parseMeta, splitOnDelimiter } from '../ai/parse';
-import { buildContext, buildSystemPrompt, buildUserPrompt } from '../ai/prompts';
+import {
+  ACHIEVEMENT_EVERY_CHAPTERS,
+  buildContext,
+  buildSystemPrompt,
+  buildUserPrompt,
+} from '../ai/prompts';
 import { buildPages } from '../reader/pages';
 import { safeFilename } from '../pdf/exportStory';
 import { deleteCover, getCover, normalizeCover, putCover } from '../storage/covers.idb';
@@ -360,6 +365,58 @@ export async function selftest(): Promise<{ passed: number; failed: number; resu
     );
 
     removeStory(promptStory.id);
+
+    // --- AI: achievement pacing -------------------------------------------------
+    // The model decides whether a chapter earned one; the guard only stops clustering.
+    const pacing: Record<string, boolean> = {};
+    for (const gap of [3, 5, 6, 8]) {
+      const pacer = createStory({ audience: 'Adults', genre: 'Drama', setting: 'Urban' });
+      updateStory(pacer.id, {
+        title: 'T',
+        status: 'reading',
+        chapters: Array.from({ length: gap }, (_, i) => ({
+          kind: 'prose' as const,
+          index: i,
+          text: 'x',
+        })),
+        achievements: [
+          { id: 'a0', title: 'First', description: 'd', unlockedAtChapter: 1 },
+        ],
+      });
+      applyChapter(getStory(pacer.id)!, {
+        prose: 'p',
+        meta: {
+          actions: ['a', 'b', 'c', 'd'],
+          achievement: { title: `Try ${gap}`, description: 'd' },
+          summary: 's',
+        },
+        metaMissing: false,
+      });
+      pacing[`gap${gap}`] = getStory(pacer.id)!.achievements.length === 2;
+      removeStory(pacer.id);
+    }
+    results.push(
+      check(
+        'achievements: clustered awards are refused below the floor',
+        pacing.gap3 === false && pacing.gap5 === false,
+        `gap3=${pacing.gap3} gap5=${pacing.gap5}`,
+      ),
+    );
+    results.push(
+      check(
+        'achievements: accepted at or beyond the floor',
+        pacing.gap6 === true && pacing.gap8 === true,
+        `gap6=${pacing.gap6} gap8=${pacing.gap8}`,
+      ),
+    );
+    results.push(
+      check(
+        'achievements: prompt states the target rate',
+        buildSystemPrompt(promptStory, ctx1).includes(
+          `once every ${ACHIEVEMENT_EVERY_CHAPTERS} chapters`,
+        ),
+      ),
+    );
 
     // --- AI: the choice loop and the ending ------------------------------------
     const loopStory = createStory({ audience: 'Children', genre: 'Drama', setting: 'Urban' });

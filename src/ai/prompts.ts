@@ -8,6 +8,23 @@ import {
 
 export const META_DELIMITER = '===META===';
 
+/**
+ * Achievement pacing, defined once because two places need to agree: the instruction
+ * given to the model, and the guard that rejects what it returns. Splitting them across
+ * files is how they drift.
+ *
+ * At one per ten chapters a Children's book earns roughly one, Young Adults two, and
+ * Adults three — rare enough that an achievement means something.
+ */
+export const ACHIEVEMENT_EVERY_CHAPTERS = 10;
+
+/**
+ * Hard floor enforced client-side. The model decides *whether* a chapter earned an
+ * achievement; this only stops them clustering. Set below the target so ordinary
+ * variance is allowed and only runaway pacing is refused.
+ */
+export const MIN_CHAPTERS_BETWEEN_ACHIEVEMENTS = 6;
+
 /** Everything the model needs to know about where it is in the book. */
 export interface ChapterContext {
   chapterNumber: number;
@@ -131,7 +148,7 @@ export function buildSystemPrompt(story: Story, ctx: ChapterContext): string {
       ctx.chaptersSinceLastAchievement === null
         ? 'None has been awarded yet.'
         : `It has been ${ctx.chaptersSinceLastAchievement} chapter(s) since the last one.`
-    } Award one only for a distinctive turn, and no more often than roughly every 5 chapters.`,
+    } Award one only for a genuinely distinctive turn — on average about once every ${ACHIEVEMENT_EVERY_CHAPTERS} chapters, so most chapters should return null.`,
     '  "summary": "the whole plot so far in under 500 words, rewritten to include this chapter. Keep the characters, places and established facts that later chapters will need to stay consistent with"',
     '}',
   );

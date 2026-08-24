@@ -404,12 +404,21 @@ After the prose, on its own line, output ===META=== followed by a single JSON ob
 ```
 
 ### 6.5 Achievements
-The model decides, freely, as you chose. Two guardrails that keep it from firing every
-chapter or never firing, without taking the decision away from it:
-- Pass `chaptersSinceLastAchievement` and instruct: award one only for a genuinely
-  distinctive turn; typically no more often than every 5 chapters.
-- Client-side rejection: if the model returns an achievement fewer than 3 parts after
-  the previous one, drop it and log it. Cheap insurance against runaway pacing.
+The model decides, freely. Two guardrails keep it from firing every chapter or never
+firing, without taking the decision away from it:
+
+- The prompt carries `chaptersSinceLastAchievement` and asks for one **on average about
+  once every 10 chapters**, stating explicitly that most chapters should return null.
+- Client-side rejection below a hard floor of **6 chapters** since the last award. Set
+  below the target so ordinary variance is allowed and only clustering is refused.
+
+Both numbers live in `prompts.ts` as `ACHIEVEMENT_EVERY_CHAPTERS` and
+`MIN_CHAPTERS_BETWEEN_ACHIEVEMENTS` — one definition each, because the instruction and
+the guard must agree and two files is how they drift.
+
+**The rate is uniform across audiences**, so chapter count decides the total: roughly
+one achievement for a Children's book (10 chapters), two for Young Adults (20), three
+for Adults (30). A Children's book may legitimately finish with none.
 
 Expect real pacing variance here — it's the accepted cost of the model deciding. If it
 turns out too noisy in practice, the client-gated variant is a small change.
@@ -768,7 +777,10 @@ Measured behaviour worth keeping in mind:
   nothing truncates what comes back. A model that drifts to 900-word summaries grows
   every subsequent prompt with no error and no signal — gradual cost creep rather than a
   failure. The prose window, by contrast, is hard-sliced.
-- **Achievement pacing**, per §6.5.
+- **Achievement pacing**, per §6.5. At one per ten chapters a 10-chapter Children's
+  book can legitimately end with zero achievements and an empty trophy sheet. If that
+  reads as broken rather than rare, the fix is per-audience pacing rather than a lower
+  global rate.
 - **Streaming on iOS Safari.** Verified working in desktop Chrome; the home-screen PWA
   context on iOS remains unverified and is the one platform detail most likely to
   surprise.

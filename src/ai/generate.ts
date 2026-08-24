@@ -7,12 +7,10 @@ import {
   buildRepairPrompt,
   buildSystemPrompt,
   buildUserPrompt,
+  MIN_CHAPTERS_BETWEEN_ACHIEVEMENTS,
   type ChapterContext,
 } from './prompts';
 import { ApiError, streamCompletion } from './stream';
-
-/** The model decides achievements, but pacing this tight is noise, not a milestone. */
-const MIN_CHAPTERS_BETWEEN_ACHIEVEMENTS = 3;
 
 export interface GenerationResult {
   prose: string;
