@@ -234,6 +234,24 @@ Two modes, same component:
   book ends with a "The End" page instead.
 
 ### 4.4 Read
+
+**While a chapter is being written**, a cover fills the stage showing the book's title
+and which chapter is on its way. Without it the reader is stranded on the last page of
+the previous chapter — a page they have just finished, with nothing after it to turn to
+— for as long as the model takes.
+
+- The cover lifts on *the reader having been moved to the new chapter's first page*,
+  not on "a page now exists". The move happens in an effect, so lifting a render
+  earlier would flash the old page for a frame before the reader is taken off it.
+- Page turns, swipes, arrow keys, and the chrome toggle are all inert while it is up:
+  nothing behind it is meant to be navigable, and the reader needs no navigation to
+  land on the new chapter.
+- A brand-new book additionally holds its title for `MIN_TITLE_MS` (4s) so the opening
+  registers. Later chapters have no minimum — the cover lifts the moment there is
+  something to read.
+- Every path that starts a chapter sets the jump target, not just the two that
+  originally did, so a retry or a manual "Write chapter one" lands the same way.
+
 - Title "Read". Tap right third → next page, left third → previous page. Center tap
   toggles the nav chrome (so the reader can go fullscreen).
 - Also support horizontal swipe, and Left/Right arrow keys for desktop testing.

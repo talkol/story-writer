@@ -104,6 +104,40 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
   const step = metrics?.columns ?? 1;
   const lastPage = Math.max(0, pages.length - 1);
 
+  const jumpToChapterRef = useRef<number | null>(null);
+  const titleSeenAtRef = useRef<number | null>(null);
+  const [titleHoldDone, setTitleHoldDone] = useState(false);
+
+  const visiblePage = turn ? turn.to : page;
+
+  /**
+   * The index the arriving chapter will occupy. While a request is in flight
+   * `story.chapters` still holds only committed chapters, so its length is exactly the
+   * index `displayStory` gives the streaming copy.
+   */
+  const pendingChapterIndex = story?.chapters.length ?? 0;
+  const readerIsOnPending =
+    pages.length > 0 &&
+    pages[Math.min(visiblePage, lastPage)]?.chapterIndex === pendingChapterIndex;
+  const isFirstChapter = story ? chapterCount(story) === 0 : false;
+
+  /**
+   * Covers the stage for as long as a chapter is being written and there is nothing of
+   * it to read.
+   *
+   * Without it the reader is stranded on the last page of the previous chapter — a page
+   * they have just finished, with nothing after it to turn to — for however long the
+   * model takes. The cover lifts on `readerIsOnPending` rather than on "a page exists",
+   * because the jump to that page happens in an effect: lifting a render earlier would
+   * flash the old page for a frame before the reader is moved off it.
+   *
+   * A brand-new book holds its title on top of that, for MIN_TITLE_MS.
+   */
+  const showWriting =
+    isWriting &&
+    (!readerIsOnPending ||
+      (isFirstChapter && titleSeenAtRef.current !== null && !titleHoldDone));
+
   /**
    * Anchors the visible page to the stored word offset. Runs on first measurement and
    * again whenever the layout changes — a rotation, a split-view resize, or a
@@ -170,6 +204,9 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
   const go = useCallback(
     (direction: 'forward' | 'back') => {
       if (turn) return; // ignore taps mid-turn rather than queueing them up
+      // Nothing behind the cover is meant to be navigable — the reader is waiting for
+      // a chapter, not reading the previous one.
+      if (showWriting) return;
       const next = direction === 'forward' ? page + step : page - step;
 
       // Flipping past the end of what has been written is how the reader asks what
@@ -190,7 +227,7 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
         setTurn(null);
       }, duration);
     },
-    [page, step, lastPage, turn, canChoose, navigate, storyId],
+    [page, step, lastPage, turn, canChoose, navigate, storyId, showWriting],
   );
 
   const hasTitle = Boolean(story?.title);
@@ -226,9 +263,6 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
   }, [go]);
 
   const touchStart = useRef<{ x: number; y: number } | null>(null);
-  const jumpToChapterRef = useRef<number | null>(null);
-  const titleSeenAtRef = useRef<number | null>(null);
-  const [titleHoldDone, setTitleHoldDone] = useState(false);
   const location = useLocation();
   const handoff = location.state as { chosenAction?: string; afterChapters?: number } | null;
   const chosenAction = handoff?.chosenAction;
@@ -288,25 +322,13 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
   if (!story) return <Navigate to="/library" replace />;
 
   function handleTap(e: React.MouseEvent<HTMLDivElement>) {
+    if (showWriting) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     if (x < 0.33) go('back');
     else if (x > 0.67) go('forward');
     else setChromeHidden((v) => !v);
   }
-
-  const visiblePage = turn ? turn.to : page;
-
-  /**
-   * The opening moment: a brand-new book being written for the first time.
-   *
-   * The title covers the page for at least MIN_TITLE_MS once it appears. The hold only
-   * starts if the title arrives *before* any prose is on screen — a title that lands
-   * late must not cover a page the reader has already started reading.
-   */
-  const openingPhase = isWriting && chapterCount(story) === 0;
-  const showOpening =
-    openingPhase && (pages.length === 0 || (titleSeenAtRef.current !== null && !titleHoldDone));
 
   // The choices are offered only once the reader has actually reached the end of what
   // has been written — the point the spec calls "the last generated page".
@@ -425,21 +447,37 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
                 {story.audience} · {story.genre} · {story.setting} — {story.totalChapters}{' '}
                 chapters
               </p>
-              <button type="button" className="btn btn--primary" onClick={() => void gen.start()}>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={() => {
+                  jumpToChapterRef.current = story.chapters.length;
+                  void gen.start();
+                }}
+              >
                 Write chapter one
               </button>
             </div>
           )}
 
-          {showOpening && (
-            <div className="reader__opening">
+          {showWriting && (
+            <div
+              className="reader__opening"
+              // The cover sits inside the stage, so without this a tap on it would
+              // bubble out and turn a page of the book underneath.
+              onClick={(e) => e.stopPropagation()}
+              role="status"
+              aria-live="polite"
+            >
               {story.title ? (
                 <>
                   {/* The title is named by its own call and usually lands before the
                       prose does. Showing it turns the wait into the book arriving. */}
-                  <p className="reader__opening-label">A new book</p>
+                  {isFirstChapter && <p className="reader__opening-label">A new book</p>}
                   <h2 className="reader__opening-title">{story.title}</h2>
-                  <p className="reader__opening-status">Writing chapter one…</p>
+                  <p className="reader__opening-status">
+                    Writing chapter {chapterCount(story) + 1} of {story.totalChapters}…
+                  </p>
                 </>
               ) : (
                 <p className="reader__thinking">Thinking of a title…</p>
@@ -481,7 +519,16 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
             <button
               type="button"
               className="btn btn--primary"
-              onClick={() => void (needsRepair ? gen.repair() : gen.start(chosenAction))}
+              onClick={() => {
+                // A repair rewrites metadata in place; only a real retry produces a
+                // chapter to land on.
+                if (needsRepair) {
+                  void gen.repair();
+                  return;
+                }
+                jumpToChapterRef.current = story.chapters.length;
+                void gen.start(chosenAction);
+              }}
             >
               Retry
             </button>
