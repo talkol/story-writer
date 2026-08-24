@@ -436,6 +436,18 @@ satisfying resolution.
 {if n == total}: This is the FINAL chapter. Resolve every thread and end the story.
 Do not offer any actions.
 
+**Setting detail.** The picker shows one word, because one word is all a reader needs to
+choose. The model gets `SETTING_DETAIL` instead — a sentence or two of concrete texture
+per setting (places, period, technology, what daily life is like). "Nature" or "Historic"
+on its own leaves the world to whatever the genre implies, which is how two different
+settings produce the same book. The entries carry no plot, characters or mood: those
+belong to the genre and the reader.
+
+It is used in all three prompts that name the setting — the chapter prompt, the title
+call, and the cover prompt at tiers 0 and 1 — so a book's prose, its name and its cover
+are working from the same world. The UI is untouched; the detail is only ever read on
+the way into a prompt.
+
 STYLE AND LANGUAGE: a per-audience block of concrete constraints, not adjectives.
 "Simple sentences, warm tone" leaves the model to guess what simple means; a stated
 reading age, an average sentence length, a rule for unfamiliar words and a paragraph

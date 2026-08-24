@@ -1,4 +1,5 @@
 import { describeApiError, OPENAI_BASE } from './client';
+import { SETTING_DETAIL } from './prompts';
 import { ApiError } from './stream';
 import type { Audience, Story } from '../types';
 
@@ -100,7 +101,9 @@ export function buildCoverPrompt(story: Story, tier: number): string {
   const art = ART[story.audience];
   const genre = story.genre.toLowerCase();
   const setting = story.setting.toLowerCase();
-  const mood = `${article(genre)} ${genre} story set in ${article(setting)} ${setting} world, ${art.readership}`;
+  const mood =
+    `${article(genre)} ${genre} story set in ${article(setting)} ${setting} world ` +
+    `(${SETTING_DETAIL[story.setting]}), ${art.readership}`;
 
   if (tier <= 0) {
     return `Front cover of a printed book, ${art.illustration}, evoking ${mood}. ${typography(story)}`;
@@ -111,7 +114,8 @@ export function buildCoverPrompt(story: Story, tier: number): string {
     // back would re-arm the filter this degradation is meant to slip past.
     return (
       `Front cover of a printed book ${art.readership}. Simple graphic design: ` +
-      `${art.graphic}, on the theme of ${setting}, no people and no scene. ${typography(story)}`
+      `${art.graphic}, drawn from ${setting} — ${SETTING_DETAIL[story.setting]} — ` +
+      `but no people and no scene. ${typography(story)}`
     );
   }
   return (

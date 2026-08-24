@@ -3,6 +3,7 @@ import {
   chapterCount,
   type Audience,
   type Chapter,
+  type Setting,
   type Story,
 } from '../types';
 
@@ -82,6 +83,41 @@ export function buildContext(story: Story, forLastChapter = false): ChapterConte
 }
 
 /**
+ * What each setting actually means, for the model only.
+ *
+ * The picker shows one word because one word is all a reader needs to choose. The model
+ * needs more than that: "Nature" or "Historic" alone leaves the world to whatever the
+ * genre suggests, which is how two different settings end up producing the same book.
+ * Each entry gives concrete texture — places, period, technology, what daily life is
+ * like — and deliberately no plot, no characters and no mood, which are the genre's job
+ * and the reader's.
+ *
+ * The UI label stays `Setting`; this is only ever read on the way into a prompt.
+ */
+export const SETTING_DETAIL: Record<Setting, string> = {
+  Western:
+    'cowboys, saloons, rail spurs, horses, robbers, railway',
+  Space:
+    'ships, stations, aliens, planets, asteroids',
+  Fantasy:
+    'magic, kingdoms, guilds, inns, elves, dwarves, orcs, monsters',
+  Urban:
+    'present-day, city, apartment blocks, buses, trains, corner shops',
+  Nature:
+    'outdoors, jungles, deserts, woods, rivers, meadows, animals',
+  Mythological:
+    'gods, monsters, mortals, omens, magic, dragons',
+  Futuristic:
+    'robots, ai, cities, technology, clean vs dystopian',
+  Medieval:
+    'castles, villages, guilds, knights, swords',
+  Prehistoric:
+    'outdoors, large animals, dinosaurs, cavemen',
+  Historic:
+    'a recognisable period of real human history, picked and then kept consistent',
+};
+
+/**
  * Per-audience writing rules, given as concrete constraints rather than adjectives.
  *
  * "Simple sentences, warm tone" leaves the model to guess what simple means; a stated
@@ -146,7 +182,7 @@ export function buildSystemPrompt(story: Story, ctx: ChapterContext): string {
     '',
     `AUDIENCE: ${story.audience}`,
     `GENRE: ${story.genre}`,
-    `SETTING: ${story.setting}`,
+    `SETTING: ${story.setting} — ${SETTING_DETAIL[story.setting]}`,
     '',
     `This is chapter ${ctx.chapterNumber} of ${ctx.totalChapters}. Write approximately ${ctx.wordTarget} words of prose.`,
   ];

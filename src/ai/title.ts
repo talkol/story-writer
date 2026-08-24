@@ -1,6 +1,6 @@
 import { describeApiError, OPENAI_BASE } from './client';
 import { ApiError, TEXT_MODEL } from './stream';
-import { TITLE_REGISTER } from './prompts';
+import { SETTING_DETAIL, TITLE_REGISTER } from './prompts';
 import { AUDIENCE_PROFILE, type Story } from '../types';
 
 /**
@@ -24,7 +24,8 @@ export async function generateTitle(opts: {
 
   const prompt =
     `Invent a title for ${article(story.genre)} ${story.genre.toLowerCase()} book set in ` +
-    `${article(story.setting)} ${story.setting.toLowerCase()} world, ` +
+    `${article(story.setting)} ${story.setting.toLowerCase()} world — ` +
+    `${SETTING_DETAIL[story.setting]} — ` +
     `written for ${story.audience.toLowerCase()} (${profile.label}).\n\n` +
     `Reply with the title and nothing else. Two to six words. Evocative and concrete. ` +
     // The title call cannot see the chapter prompt's STYLE block, so the audience's
