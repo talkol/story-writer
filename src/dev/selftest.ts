@@ -9,6 +9,7 @@ import {
   createStory,
   getSnapshot,
   getStory,
+  newId,
   removeStory,
   replaceAll,
   updateStory,
@@ -141,6 +142,37 @@ export async function selftest(): Promise<{ passed: number; failed: number; resu
 
     removeStory(created.id);
     results.push(check('removeStory: gone', getStory(created.id) === undefined));
+
+    // --- ids work outside a secure context -------------------------------------
+    // crypto.randomUUID is undefined over plain http on a LAN address, which is how
+    // the app is opened when testing on a phone or iPad against the dev server.
+    const uuidShape = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+    results.push(check('newId: valid v4 in a secure context', uuidShape.test(newId())));
+
+    const realRandomUUID = crypto.randomUUID;
+    try {
+      // @ts-expect-error deliberately simulating an insecure context
+      delete (crypto as Crypto).randomUUID;
+      const fallback = newId();
+      results.push(
+        check(
+          'newId: falls back to getRandomValues without crypto.randomUUID',
+          uuidShape.test(fallback),
+          fallback,
+        ),
+      );
+      const many = new Set(Array.from({ length: 200 }, () => newId()));
+      results.push(check('newId: fallback ids are unique', many.size === 200));
+    } finally {
+      Object.defineProperty(crypto, 'randomUUID', {
+        value: realRandomUUID,
+        configurable: true,
+        writable: true,
+      });
+    }
+    results.push(
+      check('newId: crypto.randomUUID restored', typeof crypto.randomUUID === 'function'),
+    );
 
     // --- settings -------------------------------------------------------------
     saveSettings({ apiKey: 'sk-test-value', fontScale: 1.15 });

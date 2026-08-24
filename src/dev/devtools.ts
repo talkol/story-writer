@@ -1,7 +1,8 @@
 import { normalizeCover, putCover } from '../storage/covers.idb';
-import { getSnapshot, replaceAll, updateStory } from '../storage/stories';
+import { getSnapshot, getStory, replaceAll, updateStory } from '../storage/stories';
 import { saveSettings, loadSettings } from '../storage/settings';
 import { FIXTURE_STORIES } from './fixtures';
+import { reconcileOnce, retryCoverNow } from '../ai/coverReconciler';
 import { selftest } from './selftest';
 
 /**
@@ -79,6 +80,46 @@ export function seedIfEmpty(): void {
  */
 export type MockMode = 'ok' | 'truncated' | 'badjson' | 'http401' | 'http429' | 'network';
 
+/** How the mocked image endpoint should behave, independently of the text endpoint. */
+export type ImageMockMode = 'ok' | 'fail' | 'refuse';
+let imageMode: ImageMockMode = 'ok';
+let imageCalls: Array<{ prompt: string; tier: string }> = [];
+
+export function mockImages(mode: ImageMockMode): void {
+  imageMode = mode;
+  console.info(`[dev] image endpoint mocked in "${mode}" mode`);
+}
+
+export function imageCallLog(): Array<{ prompt: string; tier: string }> {
+  return imageCalls;
+}
+
+export function clearImageCallLog(): void {
+  imageCalls = [];
+}
+
+/** A tiny PNG, base64 — enough to exercise decode, downscale and IndexedDB storage. */
+async function mockImageBase64(): Promise<string> {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 768;
+  const ctx = canvas.getContext('2d')!;
+  const g = ctx.createLinearGradient(0, 0, 512, 768);
+  g.addColorStop(0, '#7b3fa0');
+  g.addColorStop(1, '#1b1030');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 512, 768);
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.beginPath();
+  ctx.arc(340, 240, 90, 0, Math.PI * 2);
+  ctx.fill();
+  const blob = await new Promise<Blob>((r) => canvas.toBlob((b) => r(b!), 'image/png'));
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  let binary = '';
+  for (const byte of buf) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
 let realFetch: typeof fetch | null = null;
 
 export function mockOpenAI(mode: MockMode = 'ok', chunkDelayMs = 20): void {
@@ -111,9 +152,73 @@ export function mockOpenAI(mode: MockMode = 'ok', chunkDelayMs = 20): void {
 
   window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+
+    if (url.includes('/models/gpt-image-1')) {
+      // 'refuse' stands in for the organization-verification 403 here, since that is
+      // the failure this probe exists to catch.
+      if (imageMode === 'refuse') {
+        return new Response(
+          JSON.stringify({
+            error: { message: 'Your organization must be verified to use the model `gpt-image-1`.' },
+          }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response(JSON.stringify({ id: 'gpt-image-1', object: 'model' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (url.includes('/images/generations')) {
+      const sent = JSON.parse(String(init?.body ?? '{}')) as { prompt?: string };
+      imageCalls.push({
+        prompt: sent.prompt ?? '',
+        // Which prompt tier this was, inferred from the shape the builder produces.
+        tier: sent.prompt?.includes('minimal typographic')
+          ? '2'
+          : sent.prompt?.includes('Simple graphic design')
+            ? '1'
+            : '0',
+      });
+
+      if (imageMode === 'refuse') {
+        return new Response(
+          JSON.stringify({ error: { code: 'moderation_blocked', message: 'safety system' } }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (imageMode === 'fail') {
+        return new Response(JSON.stringify({ error: { message: 'mock image outage' } }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ data: [{ b64_json: await mockImageBase64() }] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     if (!url.includes('/chat/completions')) return realFetch!(input, init);
 
     if (mode === 'network') throw new TypeError('Failed to fetch');
+
+    // The title call is a plain, non-streaming completion.
+    const requested = JSON.parse(String(init?.body ?? '{}')) as { stream?: boolean };
+    if (!requested.stream) {
+      if (mode === 'http401' || mode === 'http429') {
+        return new Response(JSON.stringify({ error: { message: 'mock failure' } }), {
+          status: mode === 'http401' ? 401 : 429,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(
+        JSON.stringify({ choices: [{ message: { content: '"The Ninth Door."' } }] }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
     if (mode === 'http401' || mode === 'http429') {
       const status = mode === 'http401' ? 401 : 429;
       return new Response(JSON.stringify({ error: { message: 'mock quota exceeded' } }), {
@@ -182,6 +287,15 @@ export function install(): void {
     selftest,
     mockOpenAI,
     stopMock,
+    mockImages,
+    imageCallLog,
+    clearImageCallLog,
+    reconcileOnce,
+    retryCoverNow,
+    // Store accessors: tests must go through the store, since writing localStorage
+    // directly bypasses its in-memory cache and silently diverges.
+    updateStory,
+    getStory,
   };
   console.info('[dev] window.__dev ready — try __dev.selftest()');
 }
@@ -194,6 +308,13 @@ declare global {
       selftest: typeof selftest;
       mockOpenAI: typeof mockOpenAI;
       stopMock: typeof stopMock;
+      mockImages: typeof mockImages;
+      imageCallLog: typeof imageCallLog;
+      clearImageCallLog: typeof clearImageCallLog;
+      reconcileOnce: typeof reconcileOnce;
+      retryCoverNow: typeof retryCoverNow;
+      updateStory: typeof updateStory;
+      getStory: typeof getStory;
     };
   }
 }

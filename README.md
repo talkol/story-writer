@@ -16,11 +16,16 @@ are [Phosphor](https://phosphoricons.com), self-hosted as a WOFF2. See
 
 See [SPEC.md](SPEC.md) for the full product and technical spec.
 
-> **Status: milestone 7 of 10.** The app is playable end to end: create a story, read
+> **Status: milestone 8 of 10.** The app is playable end to end: create a story, read
 > chapter one as it streams in, choose what happens next, collect achievements, and
-> carry on to the ending. Add an OpenAI key in Settings first. Still to come: covers
-> are placeholders and Export PDF is disabled. See [SPEC.md §10](SPEC.md) for the
-> milestone list.
+> carry on to the ending. Covers are generated in the background and retry themselves
+> if they fail. Add an OpenAI key in Settings first. Still to come: Export PDF is
+> disabled, plus a polish pass. See [SPEC.md §10](SPEC.md) for the milestone list.
+
+> **Note on cost:** covers generate automatically for any story that lacks one,
+> including stories created before this existed. With a key saved, opening the app will
+> start generating them, one at a time. Each cover also costs a short text call to name
+> the book, if it has no title yet.
 
 ---
 
@@ -46,6 +51,11 @@ Opens on <http://localhost:5173>. The server binds to `0.0.0.0`, so you can also
 it on a phone or iPad on the same network — visit `http://<your-mac-ip>:5173`. That is
 the fastest way to check the reader on a real device, and it is worth doing often.
 
+Note that a LAN address over plain http is **not a secure context**, so browser APIs
+gated on one are unavailable there even though they work on `localhost`. The app
+handles this for id generation (`crypto.randomUUID`); keep it in mind before reaching
+for anything else on `window.crypto`.
+
 ### Dev-only tooling
 
 Development builds seed three fixture stories on first load (a 4-chapter YA mystery
@@ -61,6 +71,9 @@ cover stays visible. Helpers are on `window.__dev`:
 | `__dev.selftest()` | Run the 51-assertion storage and AI smoke test |
 | `__dev.mockOpenAI(mode)` | Serve a canned OpenAI stream instead of the network |
 | `__dev.stopMock()` | Restore the real `fetch` |
+| `__dev.mockImages(mode)` | Mock the image endpoint: `'ok'`, `'fail'`, `'refuse'` |
+| `__dev.reconcileOnce()` | Run one cover-reconciliation pass, ignoring pacing |
+| `__dev.imageCallLog()` | Prompts sent to the mocked image endpoint |
 
 `__dev.selftest()` exercises migrations, store CRUD, the localStorage round-trip,
 settings persistence, the IndexedDB cover pipeline, and the AI parser, prompt builder

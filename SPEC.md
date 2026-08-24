@@ -385,6 +385,68 @@ Expect real pacing variance here — it's the accepted cost of the model decidin
 turns out too noisy in practice, the client-gated variant is a small change.
 
 ### 6.6 Cover generation
+
+**Covers are a persisted job, not a call.** Recording the *intent* is what makes healing
+possible: a blob that never arrived leaves no trace, whereas a pending job can be
+retried days later. `Story.coverJob` holds `attempts`, `nextAttemptAt`, `tier`,
+`lastError` and a `leaseUntil`.
+
+- **The model letters the cover itself.** The title and genre are part of the generated
+  image, not drawn over it afterwards, so a cover cannot be made before the story has a
+  title.
+- **The story is therefore named before any prose exists.** A short non-streaming call
+  invents a title from the genre triple at cover time, and the reconciler does it
+  itself when `title` is empty. The title used to arrive with chapter one's metadata —
+  which sits *after* the prose in the stream — so covers waited 20–60s for a chapter to
+  finish, and a story whose first chapter never generated stayed untitled and coverless
+  permanently. Naming up front decouples the two: the cover is drawn in parallel with
+  chapter one rather than after it.
+- The name is stored the moment it is generated, so a failed cover never pays to name
+  the book twice, and chapter one only asks for a title if nothing has supplied one.
+- **A reconciler singleton**, not a React effect. It must outlive component mounts: a
+  loop tied to a screen would have its request aborted on every navigation, and by
+  StrictMode's remount in development.
+- **Eligibility** is derived, not stored: any titled story with no cover is pending,
+  *even with no job record*. That is how stories created before covers existed heal —
+  no migration data needed.
+- **Backoff** 1min → 5min → 30min → 2h → 12h, then 12h indefinitely. Retries never stop;
+  they just stop being frequent.
+- **Prompt degradation.** A refusal is a problem with the prompt, not a transient fault,
+  so it escalates the tier immediately rather than re-sending something already
+  declined. Every tier keeps the lettering, since that is the point of the cover; what
+  falls away is the imagery, which is what tends to trip the safety filter: tier 0 is a
+  painted illustration, tier 1 a simple graphic design, tier 2 a plain typographic
+  cover with no imagery at all.
+- **Guards**: needs a key, needs `navigator.onLine`, one job at a time, a 4-second gap
+  between jobs (the reconciler re-runs on every store change, and finishing a job
+  changes the store — without pacing, twenty cover-less stories fire twenty requests
+  back to back), and a `leaseUntil` so two open tabs do not generate the same cover.
+  A manual **Retry cover** bypasses the pacing gap; deferring a deliberate tap by
+  several seconds reads as a dead button.
+- Saving an API key clears every backoff, since a missing key is the most common reason
+  covers are stuck and the reader should not wait out a 12-hour timer they just fixed.
+- **Diagnosis is a first-class feature.** Settings → Covers has a **Diagnose covers**
+  button that gives one definitive answer. It checks `GET /v1/models/gpt-image-1` first
+  — free, and it catches by far the commonest failure: `gpt-image-1` requires the
+  OpenAI *organization* to be verified, which is separate from adding billing. Chat
+  completions keep working while image generation 403s, so the symptom is "stories
+  write but covers never appear". If access is fine it runs a real attempt, which
+  produces a real cover, so a successful diagnosis is not wasted spend.
+- The probe calls `attemptCover` directly rather than going through the scheduler. It
+  cannot use `tick()`: the store notifies subscribers synchronously, so clearing a
+  backoff fires a tick from inside `updateStory`, and the caller then awaits that
+  already-settled no-op instead of the attempt it asked for — reporting "unknown
+  reason" while the real error lands moments later.
+- `window.coverDiagnostics()` prints the same state in any build, including production,
+  since cover failures are invisible by nature and dev tooling is stripped from release.
+- **A blocked reconciler must not look like a working one.** The pending shimmer runs
+  only when generation is genuinely possible (`isCoverGenerating`); with no key or no
+  connection the placeholder is static. An animation implying progress while nothing is
+  happening is worse than no indicator. Settings carries a **Covers** section stating
+  how many are waiting and why — missing key, offline, or the last error with automatic
+  retry — which is where someone asking "why are there no covers?" will look.
+- Requests `b64_json` rather than a URL: a returned image URL is short-lived and
+  cross-origin, which would taint the canvas `normalizeCover` draws into.
 One `gpt-image-1` call at creation, prompted from title + audience + genre + setting,
 explicitly asking for a book-cover composition with no text or lettering (models render
 text badly; the title is drawn over it in the UI). Portrait 2:3. Downscale to 512×768
@@ -544,12 +606,24 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
    and the ending at `totalChapters` with a derived closing page.
 7. ~~**Achievements**~~ — *done.* The modal sheet. Achievement pages landed with the
    reader (4) and the pacing guard with generation (5).
-8. **Covers** — image generation, downscale, IndexedDB, placeholder and retry.
+8. ~~**Covers**~~ — *done.* Image generation as a self-healing background job, prompt
+   degradation, downscale, IndexedDB, placeholder and manual retry.
 9. **PDF export**.
 10. **Polish** — reduced motion, resume position, quota handling, offline, iOS Safari
     pass (100dvh, safe-area insets, no rubber-band scroll on the reader).
 
 ---
+
+## 10a. Platform constraints worth remembering
+
+- **`crypto.randomUUID` needs a secure context.** It exists on HTTPS and on
+  `localhost`, and is simply undefined over plain http on a LAN address — which is
+  exactly how the app is opened when testing on a phone or iPad against the dev
+  server. `newId()` therefore falls back to `crypto.getRandomValues`, which carries no
+  such restriction. Anything else reached for from `window.crypto` needs the same
+  check; `crypto.subtle` is likewise secure-context only.
+- Related: the reader's own testing path is a LAN address, so any browser API gated on
+  a secure context will fail there while working perfectly on `localhost`.
 
 ## 11. Open risks
 

@@ -1518,3 +1518,29 @@ body {
   font-size: 15px;
   line-height: 1.45;
 }
+
+/* A slow sheen across a placeholder whose cover is still being generated. */
+.cover--pending::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.16) 50%,
+    transparent 65%
+  );
+  background-size: 250% 100%;
+  animation: cover-sheen 2.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes cover-sheen {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}

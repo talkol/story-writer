@@ -59,8 +59,33 @@ export function getStory(id: string): Story | undefined {
   return read().find((s) => s.id === id);
 }
 
+/**
+ * A random id.
+ *
+ * `crypto.randomUUID` is only defined in a secure context — HTTPS or localhost. Open
+ * the dev server from another device on the network (`http://192.168.x.x:5173`) and it
+ * is simply missing, which would break creating a story, awarding an achievement and
+ * storing a cover. `crypto.getRandomValues` has no such restriction, so the fallback
+ * builds the same v4 shape from it.
+ */
 export function newId(): string {
-  return crypto.randomUUID();
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  const bytes = new Uint8Array(16);
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+
+  // Version 4, variant 1, per RFC 4122.
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 export function createStory(input: {

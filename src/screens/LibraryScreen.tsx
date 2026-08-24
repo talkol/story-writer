@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { coverBlocker, isCoverPending, regenerateCover } from '../ai/coverReconciler';
 import ActionSheet, { type SheetItem } from '../components/ActionSheet';
 import CoverTile, { CreateTile } from '../components/CoverTile';
 import Icon from '../components/Icon';
@@ -38,6 +39,17 @@ export default function LibraryScreen() {
             disabled: true,
             note: 'Coming in a later milestone',
             onSelect: () => {},
+          },
+          {
+            // One item for both cases: draw a cover that failed, or replace one the
+            // reader does not like.
+            label: isCoverPending(sheet.story) ? 'Retry cover' : 'Regenerate cover',
+            disabled: coverBlocker() !== null,
+            note: coverNote(sheet.story),
+            onSelect: () => {
+              regenerateCover(sheet.story.id);
+              setSheet(null);
+            },
           },
           {
             label: 'Remove',
@@ -145,6 +157,15 @@ export default function LibraryScreen() {
       )}
     </>
   );
+}
+
+/** What the regenerate item should say about itself, given the current state. */
+function coverNote(story: Story): string {
+  const blocker = coverBlocker();
+  if (blocker === 'no-key') return 'Needs an API key';
+  if (blocker === 'offline') return 'Waiting for a connection';
+  if (story.coverJob?.lastError) return story.coverJob.lastError;
+  return isCoverPending(story) ? 'Draws it now' : 'Draws a new one, using your API key';
 }
 
 function describe(story: Story): string {

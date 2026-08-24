@@ -70,10 +70,31 @@ export interface ReadingPosition {
   wordOffset: number;
 }
 
+/**
+ * Cover generation is a persisted job, not a fire-and-forget call. Recording the
+ * *intent* is what lets a failed cover heal later: a blob that never arrived leaves no
+ * trace, whereas a pending job can be retried on the next app launch, days later.
+ *
+ * The field is optional. A titled story with no cover and no job is treated as an
+ * implicitly pending job, which is how stories created before covers existed get
+ * picked up.
+ */
+export interface CoverJob {
+  attempts: number;
+  /** Epoch ms. Retries back off to a 12-hour ceiling and then continue at that rate. */
+  nextAttemptAt: number;
+  lastError?: string;
+  /** Prompt tier reached; raised when the model refuses the prompt outright. */
+  tier?: number;
+  /** Epoch ms lease, so two open tabs do not generate the same cover twice. */
+  leaseUntil?: number;
+}
+
 export interface Story {
   id: string;
   title: string;
   coverImageId: string | null;
+  coverJob?: CoverJob;
   audience: Audience;
   genre: Genre;
   setting: Setting;

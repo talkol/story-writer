@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { testApiKey } from '../ai/client';
 import ActionSheet from '../components/ActionSheet';
+import { coverStatus, probeCovers, resetCoverBackoffs } from '../ai/coverReconciler';
 import Icon from '../components/Icon';
 import NavBar, { BackButton, LargeTitle, useScrollRef } from '../components/NavBar';
 import { StorageFullError } from '../storage/quota';
@@ -22,7 +23,10 @@ export default function SettingsScreen() {
   const [status, setStatus] = useState<Status>(null);
   const [testing, setTesting] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [probing, setProbing] = useState(false);
+  const [coverResult, setCoverResult] = useState<Status>(null);
   const scrollRef = useScrollRef();
+  const covers = coverStatus();
 
   const dirty = keyInput.trim() !== (settings.apiKey ?? '');
 
@@ -44,6 +48,9 @@ export default function SettingsScreen() {
   function saveKey() {
     if (!persist({ apiKey: keyInput.trim() || null })) return;
     setStatus({ tone: 'ok', text: keyInput.trim() ? 'Key saved.' : 'Key removed.' });
+    // A missing key is the most common reason covers are stuck; supplying one should
+    // not leave stories waiting out a backoff they have already outgrown.
+    if (keyInput.trim()) resetCoverBackoffs();
     if (next && keyInput.trim()) navigate(next, { replace: true });
   }
 
@@ -127,23 +134,16 @@ export default function SettingsScreen() {
             {/* Sits directly under the field, which is where someone who has no key
                 is looking. Below the security note it would be missed. */}
             <p className="settings__note">
-              Don’t have a key?{' '}
               <a
                 className="settings__link"
                 href="https://platform.openai.com/api-keys"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Create one on the OpenAI platform
+                Create an API key on OpenAI
                 <Icon name="arrow-square-out" size={13} />
               </a>
-              . You’ll need an account with billing set up.
-            </p>
-
-            <p className="settings__note">
-              Stored in this browser’s local storage and sent only to{' '}
-              <code>api.openai.com</code>. Anyone with access to this device or browser
-              profile can read it — use a dedicated key with a spend limit.
+              . You’ll need an account with billing set up for it to work.
             </p>
           </section>
 
@@ -162,8 +162,64 @@ export default function SettingsScreen() {
                 </button>
               ))}
             </div>
-            <p className="settings__note">Applies to the reader. Pages re-flow to fit.</p>
           </section>
+
+          {covers.pending > 0 && (
+            <section className="settings__section">
+              <h2 className="settings__heading">Covers</h2>
+              {covers.pending > 0 && (
+                <p className="settings__note" style={{ marginTop: 0 }}>
+                  {covers.pending} {covers.pending === 1 ? 'story is' : 'stories are'} waiting
+                  for a cover.{' '}
+                  {covers.blocker === 'no-key'
+                    ? 'Covers are drawn by OpenAI, so they need the key above.'
+                    : covers.blocker === 'offline'
+                      ? 'Waiting for a connection.'
+                      : covers.lastError
+                        ? `Last attempt failed: ${covers.lastError} Retrying automatically.`
+                        : 'Being drawn now — they appear in the Library as they finish.'}
+                </p>
+              )}
+
+              <div className="settings__row">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={probing || !settings.apiKey}
+                  onClick={async () => {
+                    setProbing(true);
+                    setCoverResult({ tone: 'info', text: 'Checking image access…' });
+                    const result = await probeCovers();
+                    setCoverResult({ tone: result.ok ? 'ok' : 'error', text: result.message });
+                    setProbing(false);
+                  }}
+                >
+                  {probing ? 'Checking…' : 'Diagnose covers'}
+                </button>
+                {covers.blocker === null && (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                      resetCoverBackoffs();
+                      setCoverResult({ tone: 'info', text: 'Retrying covers now…' });
+                    }}
+                  >
+                    Retry now
+                  </button>
+                )}
+              </div>
+
+              {coverResult && (
+                <p
+                  className={`settings__status settings__status--${coverResult.tone}`}
+                  role="status"
+                >
+                  {coverResult.text}
+                </p>
+              )}
+            </section>
+          )}
 
           <section className="settings__section">
             <h2 className="settings__heading">Data</h2>

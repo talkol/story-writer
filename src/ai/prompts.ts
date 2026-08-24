@@ -36,7 +36,10 @@ export function buildContext(story: Story, forLastChapter = false): ChapterConte
     wordTarget: profile.wordsPerChapter,
     isFinal: chapterNumber >= story.totalChapters,
     isNearEnd: chapterNumber >= story.totalChapters - 1,
-    needsTitle: forLastChapter ? !story.title : written === 0,
+    // The story is normally named at creation, before any prose. Chapter one is only
+    // asked for a title if nothing has supplied one — a story created before titles
+    // moved up front, or one whose naming call failed.
+    needsTitle: !story.title.trim(),
     chaptersSinceLastAchievement,
     genreJustChanged: !forLastChapter && story.genreChangedAtChapter === written,
   };

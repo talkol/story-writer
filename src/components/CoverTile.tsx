@@ -1,3 +1,4 @@
+import { isCoverGenerating } from '../ai/coverReconciler';
 import Icon from './Icon';
 import { useCoverUrl } from '../storage/useCoverUrl';
 import type { Genre, Story } from '../types';
@@ -36,12 +37,13 @@ export default function CoverTile({ story }: Props) {
   }
 
   const [from, to] = GENRE_PALETTE[story.genre];
+  const pending = isCoverGenerating(story);
   return (
     <div
-      className="cover cover--placeholder"
+      className={`cover cover--placeholder${pending ? ' cover--pending' : ''}`}
       style={{ background: `linear-gradient(155deg, ${from}, ${to})` }}
       role="img"
-      aria-label={`${title}, no cover image`}
+      aria-label={pending ? `${title}, cover being generated` : `${title}, no cover image`}
     >
       <div className="cover__frame">
         {/* An untitled draft would otherwise read "Untitled Story" twice, once on the

@@ -61,6 +61,10 @@ const MIGRATIONS: Record<number, Migration> = {
       };
     });
   },
+
+  // 2 -> 3: covers became a retryable job. Nothing to add to existing records — a
+  // titled story with no cover and no job is treated as implicitly pending, which is
+  // exactly what every pre-existing story is.
 };
 
 export function wrap<T>(data: T): Envelope<T> {
