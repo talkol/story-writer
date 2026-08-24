@@ -167,13 +167,13 @@ export function buildSystemPrompt(story: Story, ctx: ChapterContext): string {
   lines.push(
     ctx.isFinal
       ? '  "actions": [],'
-      : '  "actions": [four one-sentence choices for what the protagonist does next, each a concrete action, meaningfully different from one another],',
+      : '  "actions": [four one-sentence choices for what the protagonist does next. Each must take the story somewhere the others cannot reach: a different place, a different person, a different method, or a different goal. Not four ways of doing the same thing, and never four routes into the same next scene — a reader who picks any one of them should get a chapter the other three could not have produced. Each is something the protagonist DOES, not something they feel or decide. Avoid options that amount to waiting, thinking it over, or asking someone else what to do: those collapse back into the chapter you were going to write anyway. Make at least one carry real risk, and at least one point somewhere the story has not been heading],',
     `  "achievement": null, or {"title": "2-3 words", "description": "one sentence"} if this chapter earned a genuine milestone. ${
       ctx.chaptersSinceLastAchievement === null
         ? 'None has been awarded yet.'
         : `It has been ${ctx.chaptersSinceLastAchievement} chapter(s) since the last one.`
     } Award one only for a genuinely distinctive turn — on average about once every ${ACHIEVEMENT_EVERY_CHAPTERS} chapters, so most chapters should return null.`,
-    '  "summary": "the whole plot so far in under 500 words, rewritten to include this chapter. Keep the characters, places and established facts that later chapters will need to stay consistent with"',
+    '  "summary": "the whole plot so far in under 500 words, rewritten to include this chapter. Keep the characters, places and established facts that later chapters will need to stay consistent with. Record only what has happened — no plans, no predictions, no intentions for what comes next. A summary that states where the story is heading drags every later choice back toward the same ending"',
     '}',
   );
 
@@ -215,7 +215,7 @@ export function buildUserPrompt(story: Story, ctx: ChapterContext, chosenAction?
 
   sections.push(
     chosenAction
-      ? `THE READER CHOSE:\n${chosenAction}\n\nWrite chapter ${ctx.chapterNumber}, following from that choice.`
+      ? `THE READER CHOSE:\n${chosenAction}\n\nWrite chapter ${ctx.chapterNumber}. This choice is what happens now: commit to it and let it redirect the story. Do not fold it back into the direction the earlier chapters were heading, and do not treat it as a detour that rejoins the same path — where the choice conflicts with anything the plot so far implies about what comes next, the choice wins. Continuity binds the past, not the future.`
       : `Write chapter ${ctx.chapterNumber}.`,
   );
 

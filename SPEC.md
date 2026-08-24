@@ -483,13 +483,64 @@ could picture."*
 - Adults: unconstrained vocabulary and syntax, mature themes by implication rather than
   statement, ambiguity permitted.
 
-Measured on live output for the same genre and setting, changing only the audience:
-average sentence length 6.0 words (Children) against 10.5 (Young Adults), longest
-sentence 12 against 43, and words of nine or more letters 1.4% against 3.5%. The
-constraints demonstrably reach the prose. Those figures predate the lowering of the
-Children reading age from seven to five, so they are a ceiling on the current output,
-not a description of it — the simplified block has been verified as far as the request
-body on the wire, but not yet measured against live prose.
+Measured on live output. The first run, changing only the audience, gave average
+sentence length 6.0 words (Children) against 10.5 (Young Adults), longest sentence 12
+against 43, and words of nine or more letters 1.4% against 3.5%.
+
+A second live run, after lowering the Children reading age to five and constraining
+Young Adults syntax:
+
+| | Children | Young Adults |
+|---|---|---|
+| avg sentence | 5.0 / 6.0 words | 6.8 / 7.1 words |
+| longest sentence | 9 | 21 / 20 |
+| words of 9+ letters | 0.4% / 0.0% | 1.7% / 3.9% |
+
+Both changes reached the prose, but **the Young Adults change overshot**. Complex
+construction is gone as intended (longest sentence 43 → ~20) and the vocabulary stayed
+rich (long-word rate still around the old 3.5%), but the stated fourteen-word average
+was ignored in favour of the "avoid complex sentences" clause: YA now averages ~7 words,
+within about one word of Children, so the two audiences are no longer distinguishable by
+sentence length. If they should be, the fix is to weight the rule toward the number and
+soften the prohibition — the model follows whichever half of that instruction is more
+categorical.
+
+**Branching.** Convergence — every choice producing more or less the same next chapter
+— has three causes, and all three are addressed in the prompt rather than only the first:
+
+1. *The options are cosmetic.* The four actions must each reach somewhere the others
+   cannot: a different place, person, method, or goal. Not four phrasings of one move,
+   and never four routes into the same scene. Options that amount to waiting, thinking
+   it over, or asking someone what to do are excluded outright — they collapse straight
+   back into the chapter the model was already going to write.
+2. *The chapter nods at the choice and rejoins its own path.* "Following from that
+   choice" was too soft: the chapter now has to commit to the choice and let it
+   redirect the story, and where the choice conflicts with anything the plot implies
+   about what comes next, **the choice wins**. Continuity binds the past, not the
+   future.
+3. *The rolling summary encodes a plan.* This is the quiet one. A summary that records
+   "she must reach the tower before dawn" pulls every later branch back toward the
+   tower, no matter what the reader picked, and it compounds because each summary is
+   written from the last. The summary is now explicitly restricted to what has
+   happened — no plans, predictions, or intentions.
+
+The near-end instruction still asks the model to converge toward a resolution. That
+convergence is deliberate and stays.
+
+Verified live, generating the same chapter twice from one identical story state under two
+different choices:
+
+- The four offered actions went to four different places, people and methods (school
+  locker / confront the man in the hallway / a closed subway entrance / the repair-shop
+  owner downstairs).
+- Lexical overlap between the two chapters was 0.17, and the casts were disjoint —
+  Harlan and Brenner in one, Reyes, Vale and Patel in the other.
+- Each chapter committed to its own branch: the one given the locker choice mentions the
+  locker and the school and never the repair shop; the one given the repair-shop choice
+  goes to Mr. Okafor's.
+
+Both branches did open on the same beat, a variation of the same sentence, since they
+continue the same scene — the seam converges even though the chapters do not.
 
 Continuity: honor the summary and recent prose exactly. Never contradict established
 facts, names, or the protagonist's voice.
