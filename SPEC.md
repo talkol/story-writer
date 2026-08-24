@@ -15,7 +15,7 @@ browser; no backend.
 | Storage | Browser-local (localStorage + IndexedDB), no server |
 | AI provider | OpenAI, user-supplied API key stored locally |
 | Text model | `gpt-5` |
-| Cover images | AI-generated (`gpt-image-1`), required at story creation |
+| Cover images | AI-generated (`gpt-image-2` at `medium`), lettered by the model |
 | Generation UX | Single streaming call; prose renders as it arrives |
 | Pagination | Measured reflow against the live container |
 | iPad | Two-page spread in landscape, single page in portrait |
@@ -441,8 +441,8 @@ retried days later. `Story.coverJob` holds `attempts`, `nextAttemptAt`, `tier`,
 - Saving an API key clears every backoff, since a missing key is the most common reason
   covers are stuck and the reader should not wait out a 12-hour timer they just fixed.
 - **Diagnosis is a first-class feature.** Settings → Covers has a **Diagnose covers**
-  button that gives one definitive answer. It checks `GET /v1/models/gpt-image-1` first
-  — free, and it catches by far the commonest failure: `gpt-image-1` requires the
+  button that gives one definitive answer. It checks `GET /v1/models/<image model>`
+  first — free, and it catches by far the commonest failure: the image model requires the
   OpenAI *organization* to be verified, which is separate from adding billing. Chat
   completions keep working while image generation 403s, so the symptom is "stories
   write but covers never appear". If access is fine it runs a real attempt, which
@@ -462,7 +462,7 @@ retried days later. `Story.coverJob` holds `attempts`, `nextAttemptAt`, `tier`,
   retry — which is where someone asking "why are there no covers?" will look.
 - Requests `b64_json` rather than a URL: a returned image URL is short-lived and
   cross-origin, which would taint the canvas `normalizeCover` draws into.
-One `gpt-image-1` call at creation, prompted from title + audience + genre + setting,
+One image call, prompted from title + audience + genre + setting,
 explicitly asking for a book-cover composition with no text or lettering (models render
 text badly; the title is drawn over it in the UI). Portrait 2:3. Downscale to 512×768
 JPEG before storing. Failure leaves `coverImageId: null` and shows a neutral placeholder
@@ -721,10 +721,13 @@ Measured behaviour worth keeping in mind:
   and never exceeded it, so the uncapped-summary risk did not materialise here. Still
   unguarded, though.
 - **Chapter latency was 17–27s** with `reasoning_effort: low`.
-- **The image model misspells.** The first cover rendered "AND TIE SKYBRIDGE" for "AND
-  THE SKYBRIDGE" — every other word correct. This is the known cost of having the model
-  letter the cover rather than compositing the text locally; short function words are
-  where it fails. Regenerating is the only remedy.
+- **Cover misspelling was a quality setting, not the model.** The first cover rendered
+  "AND TIE SKYBRIDGE" for "AND THE SKYBRIDGE". A controlled comparison on the same
+  prompt showed `gpt-image-1` at `medium` spells it correctly, and `gpt-image-2` spells
+  it correctly even at `low` — at `low`, `gpt-image-1` has too little budget to form
+  small function words. Fixed by moving to `gpt-image-2` at `medium`: the lettering is
+  the point of the cover, and a misspelled title cannot be corrected without paying to
+  regenerate the whole image.
 
 ## 11. Open risks
 
@@ -743,8 +746,9 @@ Measured behaviour worth keeping in mind:
 - **Streaming on iOS Safari.** Verified working in desktop Chrome; the home-screen PWA
   context on iOS remains unverified and is the one platform detail most likely to
   surprise.
-- **Cover spelling.** The image model misspells short words in titles (§11a). If this
-  proves common, compositing the text in canvas over wordless artwork would make it
-  exact — at the cost of type that sits on the image rather than in it.
+- **Cover spelling.** Resolved by model and quality (§11a), but not guaranteed —
+  image models can still misspell. If it recurs, compositing the text in canvas over
+  wordless artwork would make it exact, at the cost of type that sits on the image
+  rather than in it.
 - **Genre switching mid-story** can produce tonal whiplash by design. The "deliberate
   shift" prompt flag mitigates it but won't eliminate it.

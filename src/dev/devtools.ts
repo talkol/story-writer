@@ -154,18 +154,18 @@ export function mockOpenAI(mode: MockMode = 'ok', chunkDelayMs = 20): void {
   window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
 
-    if (url.includes('/models/gpt-image-1')) {
+    if (/\/models\/gpt-image/.test(url)) {
       // 'refuse' stands in for the organization-verification 403 here, since that is
       // the failure this probe exists to catch.
       if (imageMode === 'refuse') {
         return new Response(
           JSON.stringify({
-            error: { message: 'Your organization must be verified to use the model `gpt-image-1`.' },
+            error: { message: 'Your organization must be verified to use the model `gpt-image-2`.' },
           }),
           { status: 403, headers: { 'Content-Type': 'application/json' } },
         );
       }
-      return new Response(JSON.stringify({ id: 'gpt-image-1', object: 'model' }), {
+      return new Response(JSON.stringify({ id: 'gpt-image-2', object: 'model' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });

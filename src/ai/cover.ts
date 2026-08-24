@@ -2,17 +2,28 @@ import { describeApiError, OPENAI_BASE } from './client';
 import { ApiError } from './stream';
 import type { Audience, Story } from '../types';
 
-export const IMAGE_MODEL = 'gpt-image-1';
+/**
+ * `gpt-image-2` (April 2026) rather than `gpt-image-1`. Compared directly on the same
+ * prompt: the newer model produced a full painted illustration where the older one gave
+ * a flat silhouette, and both rendered the title correctly — see the quality note below
+ * for why that mattered.
+ */
+export const IMAGE_MODEL = 'gpt-image-2';
 
 /** 2:3 portrait, matching the cover tile. Downscaled to 512×768 before storage. */
 const IMAGE_SIZE = '1024x1536';
 
 /**
- * Low quality is deliberate: the result is downscaled to 512×768 for storage anyway,
- * and this is the one call in the app that costs cents rather than fractions of one.
- * One line to raise if covers look thin.
+ * Quality is the setting that governs whether the title is spelled correctly.
+ *
+ * At `low`, `gpt-image-1` rendered "AND TIE SKYBRIDGE" for "AND THE SKYBRIDGE" — the
+ * model has too little budget to form small function words. At `medium` the same model
+ * spelled it perfectly, and `gpt-image-2` spells it correctly even at `low`. Since the
+ * lettering is the whole point of the cover, this is not the place to economise: the
+ * result is downscaled to 512×768 regardless, but a misspelled title is unfixable
+ * without paying to generate the image again.
  */
-const IMAGE_QUALITY = 'low';
+const IMAGE_QUALITY = 'medium';
 
 /** Raised when the model declines the prompt itself, rather than failing to run. */
 export class PromptRefusedError extends Error {
