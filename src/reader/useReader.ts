@@ -56,12 +56,77 @@ function sameMetrics(a: ReaderMetrics | null, b: ReaderMetrics | null): boolean 
 }
 
 /**
+ * Milliseconds to wait for the reader's face before paginating without it.
+ *
+ * The ceiling matters more than the font does. If the WOFF2 never arrives the book
+ * still has to be readable, so a stalled load degrades to the fallback serif rather
+ * than leaving the reader staring at an empty stage.
+ */
+const FONT_TIMEOUT_MS = 3000;
+
+/**
+ * Resolves once the book face is usable — or once waiting stops being worth it.
+ *
+ * Pagination slices a chapter by measuring its real rendered height, so measuring
+ * while the fallback serif is still standing in produces page breaks for a font the
+ * reader will never see. Asking for the faces by name starts the load even before
+ * anything has been laid out in them, which is what makes `fonts.ready` mean what it
+ * says at this point in startup.
+ *
+ * Memoised on first call rather than run at module scope, and deliberately so:
+ * `main.tsx` imports `App` — and through it this module — before it imports the
+ * stylesheet that declares the face. Asking at module scope would ask before any
+ * @font-face existed, match nothing, and resolve having loaded nothing. First call
+ * comes from an effect, by which point the CSS is applied.
+ */
+let bookFaceReady: Promise<void> | null = null;
+
+function whenBookFaceReady(): Promise<void> {
+  if (bookFaceReady) return bookFaceReady;
+  if (typeof document === 'undefined' || !document.fonts) {
+    bookFaceReady = Promise.resolve();
+    return bookFaceReady;
+  }
+  const faces = [
+    '400 1rem Literata',
+    'italic 400 1rem Literata',
+    '700 1rem Literata',
+    'italic 700 1rem Literata',
+  ];
+  const loaded = Promise.all(faces.map((face) => document.fonts.load(face)))
+    .then(() => document.fonts.ready)
+    .then(() => undefined);
+  const ceiling = new Promise<void>((resolve) => {
+    window.setTimeout(resolve, FONT_TIMEOUT_MS);
+  });
+  bookFaceReady = Promise.race([loaded, ceiling]).catch(() => undefined);
+  return bookFaceReady;
+}
+
+function useBookFaceReady(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void whenBookFaceReady().then(() => {
+      if (live) setReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return ready;
+}
+
+/**
  * Measures how many pages each prose chapter occupies.
  *
  * The measurer holds every chapter's flow at the real column width, so this is one
  * layout pass for the whole book rather than one per chapter. `signature` exists so
  * the measurement re-runs when the text or the metrics change, but not on unrelated
  * re-renders.
+ *
+ * The first pass may land while the fallback serif is still showing, so it runs again
+ * when the book face arrives and the flow reflows underneath it.
  */
 export function useChapterSlices(
   measurerRef: RefObject<HTMLElement | null>,
@@ -69,6 +134,7 @@ export function useChapterSlices(
   signature: string,
 ): number[] {
   const [slices, setSlices] = useState<number[]>([]);
+  const faceReady = useBookFaceReady();
 
   useLayoutEffect(() => {
     const root = measurerRef.current;
@@ -81,7 +147,7 @@ export function useChapterSlices(
       next[chapterIndex] = pageCountFor(flow.scrollHeight, metrics.pageHeight);
     }
     setSlices((prev) => (sameCounts(prev, next) ? prev : next));
-  }, [measurerRef, metrics, signature]);
+  }, [measurerRef, metrics, signature, faceReady]);
 
   return slices;
 }

@@ -78,6 +78,23 @@ devices it targets.
   icon, and a wide card would letterbox it. OG requires absolute URLs, so those tags
   hard-code `https://reading.quest/` — the one place the domain appears outside `CNAME`.
 
+- **Book face.** Story text is set in **Literata**, the same face `src/pdf/` embeds, so
+  a chapter looks the same on screen as it does in the exported PDF. `--font-serif`
+  drives every book-voice element — the reader flow, chapter headings, cover titles,
+  the achievement description, the Actions choices — so they all moved together.
+  - Declared by hand in `src/fonts.css` from `@fontsource/literata`'s latin WOFF2s
+    (four faces, 86 KB total). Importing the package's own CSS instead would emit a
+    @font-face and a file for every subset it ships. The web build uses WOFF2; the PDF
+    keeps its TTFs, because jsPDF can only embed TTF.
+  - `font-display: block`, not `swap`. Pagination measures real glyph metrics, so a
+    fallback painting first and swapping later would show the book sliced on line
+    breaks that no longer exist.
+  - `useChapterSlices` re-measures when the face lands (`whenBookFaceReady`), with a
+    3s ceiling so a font that never loads degrades to the fallback serif rather than
+    leaving the reader on an empty stage. That promise is created on first call rather
+    than at module scope: `main.tsx` reaches this module through `import App` before it
+    imports the stylesheet, so asking at module scope would match no @font-face at all.
+
 ## 2. Core concepts and vocabulary
 
 - **Story** — one book. Has a title, cover, genre triple, pages, achievements, summary.
@@ -559,7 +576,11 @@ For slicing to be safe the flow must sit on a **line grid**:
 
 - Line height is an integer number of pixels (`round(fontSize × 1.6)`); fractional
   line heights accumulate rounding error down the page and drift off the grid. Body
-  text is 21px at 100% scale, giving a 34px line.
+  text is 18px at 100% scale, giving a 29px line. The size is tuned to Literata
+  rather than inherited from the old system serif: Literata's x-height runs 13%
+  larger and it sets 15% wider, so the 21px that suited New York read like ~24px
+  once the book face went in. 19px would have been the like-for-like swap; 18px is a
+  deliberate step below it.
 - Paragraph spacing is exactly one line, so block boundaries stay on the grid.
 - Page height is rounded *down* to a whole number of lines.
 - **Chapter headings** ("Chapter 1", bold, 1.35em) open each prose chapter inside the

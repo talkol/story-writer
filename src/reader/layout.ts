@@ -12,7 +12,13 @@ import type { FontScale } from '../types';
  * rounded down to a whole number of lines.
  */
 
-const BASE_FONT_SIZE = 21;
+/*
+ * Sized for Literata specifically. Its x-height runs 13% larger and it sets 15% wider
+ * than the system serif this reader used before, so the 21px that suited New York read
+ * like roughly 24px once the book face went in. 19px would be the like-for-like
+ * replacement; 18px is a deliberate step below that, for a denser page.
+ */
+const BASE_FONT_SIZE = 18;
 const LINE_RATIO = 1.6;
 
 /**

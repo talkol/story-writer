@@ -36,8 +36,12 @@
 
   --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI',
     Roboto, 'Helvetica Neue', Arial, sans-serif;
-  /* ui-serif is New York on Apple platforms — what Books itself reaches for. */
-  --font-serif: ui-serif, 'New York', Charter, 'Iowan Old Style', Georgia, serif;
+  /* Literata is the face the PDF export embeds, so a story looks the same on screen
+     as it does in print. The system serifs stay behind it as the fallback for the
+     moments before the WOFF2 lands and for anything that fails to load it; ui-serif
+     is New York on Apple platforms, what Books itself reaches for. */
+  --font-serif: 'Literata', ui-serif, 'New York', Charter, 'Iowan Old Style', Georgia,
+    serif;
 
   --font-scale: 1;
 }

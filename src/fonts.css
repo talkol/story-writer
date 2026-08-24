@@ -1,0 +1,44 @@
+/*
+ * Literata — the same face the PDF export embeds, so a story reads identically on
+ * screen and in print. Declared by hand rather than by importing
+ * `@fontsource/literata/400.css`, which pulls every subset the package ships
+ * (cyrillic, greek, vietnamese, latin-ext) and emits a @font-face plus a file for
+ * each. Only the latin WOFF2s the reader actually uses are declared here.
+ *
+ * font-display: block, not swap. The reader paginates by measuring real glyph
+ * metrics, so a fallback face painting first and swapping later would show the book
+ * sliced on the wrong line breaks. Blocking keeps the text unpainted for the few
+ * milliseconds these same-origin files take, and `whenFontsReady` re-measures if the
+ * font somehow arrives later anyway.
+ */
+@font-face {
+  font-family: 'Literata';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('@fontsource/literata/files/literata-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Literata';
+  font-style: italic;
+  font-weight: 400;
+  font-display: block;
+  src: url('@fontsource/literata/files/literata-latin-400-italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Literata';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('@fontsource/literata/files/literata-latin-700-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Literata';
+  font-style: italic;
+  font-weight: 700;
+  font-display: block;
+  src: url('@fontsource/literata/files/literata-latin-700-italic.woff2') format('woff2');
+}
