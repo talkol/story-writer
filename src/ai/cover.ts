@@ -45,36 +45,73 @@ export class PromptRefusedError extends Error {
 function typography(story: Story): string {
   return (
     `The book's title reads exactly "${story.title}" — spell it precisely, word for word, ` +
-    `set large in elegant serif capitals across the cover. ` +
+    `set large in ${ART[story.audience].lettering} across the cover. ` +
     `Below the title, smaller and letter-spaced, the single word "${story.genre.toUpperCase()}". ` +
     `Both must be crisp, correctly spelled, and clearly legible. No other text anywhere.`
   );
 }
 
-/** Audience phrasing that reads as English rather than as a field value. */
-const READERSHIP: Record<Audience, string> = {
-  Children: 'for children',
-  'Young Adults': 'for young adult readers',
-  Adults: 'for adult readers',
+interface ArtDirection {
+  /** Tier 0: how the illustrated cover is painted. */
+  illustration: string;
+  /** Tier 1: shapes and colour only, once the illustration has been refused. */
+  graphic: string;
+  /** How the title and genre are set — applies at every tier. */
+  lettering: string;
+  /** Audience phrasing that reads as English rather than as a field value. */
+  readership: string;
+}
+
+/**
+ * Per-audience art direction, the visual counterpart to STYLE in `prompts.ts`.
+ *
+ * Naming the audience is not the same as directing the cover. Every book used to get
+ * "a strong silhouette and dramatic light" — a thriller instruction — with a trailing
+ * "for children" left to argue against it, which is why children's covers came out
+ * moody. The illustration style, the fallback graphic style and the lettering all now
+ * follow the reader.
+ */
+const ART: Record<Audience, ArtDirection> = {
+  Children: {
+    illustration:
+      'a picture-book cover: bright flat colour, rounded friendly shapes, soft even light, one clear character or object, nothing menacing or shadowed',
+    graphic: 'simple cut-paper shapes in bright, warm colour',
+    lettering: 'chunky rounded sans-serif capitals',
+    readership: 'for children',
+  },
+  'Young Adults': {
+    illustration:
+      'a bold graphic illustration: high contrast, saturated colour, one striking figure or object, atmosphere and tension rather than menace',
+    graphic: 'bold geometric shapes in high-contrast colour',
+    lettering: 'clean modern sans-serif capitals',
+    readership: 'for young adult readers',
+  },
+  Adults: {
+    illustration: 'a painted illustration with a strong silhouette and dramatic light',
+    graphic: 'restrained abstract shapes, a muted palette and visible texture',
+    lettering: 'elegant serif capitals',
+    readership: 'for adult readers',
+  },
 };
 
 const article = (word: string) => (/^[aeiou]/i.test(word) ? 'an' : 'a');
 
 export function buildCoverPrompt(story: Story, tier: number): string {
+  const art = ART[story.audience];
   const genre = story.genre.toLowerCase();
   const setting = story.setting.toLowerCase();
-  const mood = `${article(genre)} ${genre} story set in ${article(setting)} ${setting} world, ${READERSHIP[story.audience]}`;
+  const mood = `${article(genre)} ${genre} story set in ${article(setting)} ${setting} world, ${art.readership}`;
 
   if (tier <= 0) {
-    return (
-      `Front cover of a printed book, painted illustration with a strong silhouette and ` +
-      `dramatic light, evoking ${mood}. ${typography(story)}`
-    );
+    return `Front cover of a printed book, ${art.illustration}, evoking ${mood}. ${typography(story)}`;
   }
   if (tier <= 1) {
+    // The audience's style carries into the fallback, but the genre does not: this tier
+    // exists because the narrative imagery was refused, and putting "a crime story"
+    // back would re-arm the filter this degradation is meant to slip past.
     return (
-      `Front cover of a printed book. Simple graphic design: ${story.setting.toLowerCase()} ` +
-      `shapes, texture and colour, no people and no scene. ${typography(story)}`
+      `Front cover of a printed book ${art.readership}. Simple graphic design: ` +
+      `${art.graphic}, on the theme of ${setting}, no people and no scene. ${typography(story)}`
     );
   }
   return (

@@ -604,9 +604,25 @@ retried days later. `Story.coverJob` holds `attempts`, `nextAttemptAt`, `tier`,
 - **Prompt degradation.** A refusal is a problem with the prompt, not a transient fault,
   so it escalates the tier immediately rather than re-sending something already
   declined. Every tier keeps the lettering, since that is the point of the cover; what
-  falls away is the imagery, which is what tends to trip the safety filter: tier 0 is a
-  painted illustration, tier 1 a simple graphic design, tier 2 a plain typographic
-  cover with no imagery at all.
+  falls away is the imagery, which is what tends to trip the safety filter: tier 0 is an
+  illustrated cover, tier 1 a simple graphic design, tier 2 a plain typographic cover
+  with no imagery at all.
+- **Per-audience art direction** (`ART` in `cover.ts`), the visual counterpart to `STYLE`
+  in `prompts.ts`. Naming the audience is not the same as directing the cover: every
+  book previously got "a strong silhouette and dramatic light" — a thriller instruction
+  — with a trailing "for children" left to argue against it, which is why children's
+  covers came out moody. Three things now follow the reader:
+  - the tier-0 illustration style (picture-book flat colour / bold graphic / painted
+    silhouette),
+  - the tier-1 fallback graphic style (cut-paper / geometric / restrained abstract),
+  - the lettering, at every tier (chunky rounded sans / clean modern sans / elegant
+    serif) — a children's book set in the same serif capitals as an adult crime novel
+    was reading as an adult book whatever the picture did.
+- **What each tier still sees.** Tier 0 carries genre, setting and audience. Tier 1
+  carries audience and setting but *deliberately drops the genre phrase*: that tier only
+  exists because the narrative imagery was refused, and putting "a crime story" back
+  would re-arm the filter the degradation is meant to slip past. Tier 2 drives the image
+  from none of them — genre survives only as the word printed under the title.
 - **Guards**: needs a key, needs `navigator.onLine`, one job at a time, a 4-second gap
   between jobs (the reconciler re-runs on every store change, and finishing a job
   changes the store — without pacing, twenty cover-less stories fire twenty requests
