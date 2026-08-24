@@ -16,11 +16,12 @@ are [Phosphor](https://phosphoricons.com), self-hosted as a WOFF2. See
 
 See [SPEC.md](SPEC.md) for the full product and technical spec.
 
-> **Status: milestone 8 of 10.** The app is playable end to end: create a story, read
+> **Status: milestone 9 of 10.** The app is playable end to end: create a story, read
 > chapter one as it streams in, choose what happens next, collect achievements, and
 > carry on to the ending. Covers are generated in the background and retry themselves
-> if they fail. Add an OpenAI key in Settings first. Still to come: Export PDF is
-> disabled, plus a polish pass. See [SPEC.md §10](SPEC.md) for the milestone list.
+> if they fail, and a finished story exports as a PDF book. Add an OpenAI key in
+> Settings first. Remaining: a polish pass. See [SPEC.md §10](SPEC.md) for the
+> milestone list.
 
 > **Note on cost:** covers generate automatically for any story that lacks one,
 > including stories created before this existed. With a key saved, opening the app will
@@ -96,6 +97,13 @@ production builds.
 ```bash
 npm run typecheck
 ```
+
+```bash
+npm run fonts
+```
+
+`fonts` regenerates the TTFs the PDF exporter embeds, by decompressing Literata's WOFF2
+Latin subsets. The output is checked in, so you only need this if the font changes.
 
 ```bash
 npm run build

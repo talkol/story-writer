@@ -543,14 +543,44 @@ sub-line offset and zero lines straddle a page boundary.
 
 ## 8. PDF export
 
-Client-side with `jsPDF`.
-1. Cover page: full-bleed cover image, title overlaid.
-2. Title page: title, genre triple, date.
-3. Body: prose reflowed to the PDF page size (its own pagination, independent of screen
-   pagination), chapter breaks between parts.
-4. Achievement pages rendered as decorated inserts in place.
-5. Final page: an index of all achievements.
-Runs off the main thread if it blocks noticeably; show a progress state either way.
+Client-side with `jsPDF`, on **B-format paperback** (129×198mm) — the standard size for
+a printed novel, and noticeably smaller in the hand than A5.
+
+**Set in Literata**, embedded as a TrueType face rather than using one of jsPDF's
+built-ins. It is *not* the reader's own font: on screen the app uses `ui-serif`, which
+resolves to **New York** on Apple platforms — an Apple system font, which cannot be
+redistributed inside a PDF and is not available as a file to embed. Literata is the
+closest freely-licensed match (OFL): a book face designed for on-screen reading, with
+similar proportions and colour.
+
+- Fontsource ships WOFF2 only and jsPDF parses TTF only, so `npm run fonts` decompresses
+  the Latin subsets back to TTF. WOFF2 is a compressed sfnt, so this is lossless. The
+  output is checked in, and an ordinary build needs no font tooling.
+- The Latin subsets are ~48KB per face rather than several hundred, and the three faces
+  are separate assets fetched at export time — nothing pays for them until someone
+  exports.
+- If the faces cannot be fetched the exporter falls back to Times rather than failing
+  the export.
+
+1. Cover page: full-bleed cover image, cover-fitted so the overflowing axis runs off the
+   edge. **The title is not overlaid**: the image model letters it into the artwork
+   itself (§6.6), so drawing it again here would print it twice.
+2. Title page, on a page of its own.
+3. Body: prose reflowed to the PDF page size — its own pagination, unrelated to the
+   reader's. Each chapter opens on a fresh page, as in the reader and in a printed book.
+4. Achievement pages as centred inserts, in sequence.
+5. "The End" when the story is finished, then an index of all achievements.
+6. Page numbers on every page except the cover, which a printed book also leaves
+   unnumbered.
+
+- **jsPDF is imported dynamically.** It is ~390KB (129KB gzipped) and most sessions never
+  export anything; loading it up front would make every cold start pay for an occasional
+  feature. Its optional `html2canvas` and `dompurify` dependencies are dynamic imports
+  inside jsPDF itself, so they are emitted as chunks but never fetched — nothing here
+  calls `doc.html()`.
+- Export is fast enough not to need a worker (~150ms for a three-chapter book), but a
+  toast reports progress, since a long book plus image decoding is not instant.
+- Export is disabled for a story with no chapters.
 
 ---
 
@@ -608,7 +638,8 @@ production builds. Verify with `grep -c "Lantern of Drowned" dist/assets/*.js`.
    reader (4) and the pacing guard with generation (5).
 8. ~~**Covers**~~ — *done.* Image generation as a self-healing background job, prompt
    degradation, downscale, IndexedDB, placeholder and manual retry.
-9. **PDF export**.
+9. ~~**PDF export**~~ — *done.* A5 book, cover page, title page, chapters, achievement
+   inserts, closing page and achievement index, with jsPDF loaded on demand.
 10. **Polish** — reduced motion, resume position, quota handling, offline, iOS Safari
     pass (100dvh, safe-area insets, no rubber-band scroll on the reader).
 

@@ -1544,3 +1544,54 @@ body {
     background-position: -50% 0;
   }
 }
+
+/* ---- Export toast -------------------------------------------------------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 140;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 11px 16px;
+  border-radius: 22px;
+  background: var(--bg-elevated);
+  color: var(--label);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.26);
+  animation: sheet-up 240ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+@media (prefers-color-scheme: light) {
+  .toast {
+    box-shadow:
+      0 6px 28px rgba(0, 0, 0, 0.16),
+      inset 0 0 0 0.5px var(--separator);
+  }
+}
+
+.toast strong {
+  font-weight: 600;
+}
+
+.toast__spinner {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 2px solid var(--separator);
+  border-top-color: var(--tint);
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

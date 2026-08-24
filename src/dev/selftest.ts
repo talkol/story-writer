@@ -2,6 +2,7 @@ import { applyChapter } from '../ai/generate';
 import { displayableProse, MetaFormatError, parseMeta, splitOnDelimiter } from '../ai/parse';
 import { buildContext, buildSystemPrompt, buildUserPrompt } from '../ai/prompts';
 import { buildPages } from '../reader/pages';
+import { safeFilename } from '../pdf/exportStory';
 import { deleteCover, getCover, normalizeCover, putCover } from '../storage/covers.idb';
 import { migrate, wrap } from '../storage/migrations';
 import { loadSettings, saveSettings } from '../storage/settings';
@@ -432,6 +433,20 @@ export async function selftest(): Promise<{ passed: number; failed: number; resu
     );
 
     removeStory(loopStory.id);
+
+    // --- PDF filenames ---------------------------------------------------------
+    results.push(
+      check(
+        'pdf: strips characters filesystems reject',
+        safeFilename('A/B: "Story"?') === 'AB Story',
+        safeFilename('A/B: "Story"?'),
+      ),
+    );
+    results.push(check('pdf: blank title falls back', safeFilename('   ') === 'story'));
+    results.push(
+      check('pdf: ordinary titles pass through', safeFilename('Ordinary Title') === 'Ordinary Title'),
+    );
+    results.push(check('pdf: very long titles are truncated', safeFilename('x'.repeat(200)).length === 60));
 
     // --- covers (IndexedDB + canvas downscale) --------------------------------
     const canvas = document.createElement('canvas');

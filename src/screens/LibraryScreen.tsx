@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { coverBlocker, isCoverPending, regenerateCover } from '../ai/coverReconciler';
+import { exportStoryToPdf } from '../pdf/exportStory';
 import ActionSheet, { type SheetItem } from '../components/ActionSheet';
 import CoverTile, { CreateTile } from '../components/CoverTile';
 import Icon from '../components/Icon';
@@ -19,6 +20,7 @@ export default function LibraryScreen() {
   const navigate = useNavigate();
   const stories = useStories();
   const [sheet, setSheet] = useState<Sheet>(null);
+  const [exporting, setExporting] = useState<{ title: string; stage: string } | null>(null);
   const scrollRef = useScrollRef();
 
   function openStory(story: Story) {
@@ -36,9 +38,16 @@ export default function LibraryScreen() {
       ? [
           {
             label: 'Export PDF',
-            disabled: true,
-            note: 'Coming in a later milestone',
-            onSelect: () => {},
+            disabled: sheet.story.chapters.length === 0,
+            note:
+              sheet.story.chapters.length === 0
+                ? 'Nothing written yet'
+                : 'Cover, chapters and achievements',
+            onSelect: () => {
+              const story = sheet.story;
+              setSheet(null);
+              void runExport(story);
+            },
           },
           {
             // One item for both cases: draw a cover that failed, or replace one the
@@ -70,6 +79,21 @@ export default function LibraryScreen() {
             },
           ]
         : [];
+
+  async function runExport(story: Story) {
+    setExporting({ title: story.title || 'Untitled Story', stage: 'Preparing…' });
+    try {
+      await exportStoryToPdf(story, (stage) =>
+        setExporting({ title: story.title || 'Untitled Story', stage }),
+      );
+    } catch (err) {
+      console.error('[pdf] export failed', err);
+      setExporting({ title: story.title || 'Untitled Story', stage: 'Export failed.' });
+      window.setTimeout(() => setExporting(null), 2600);
+      return;
+    }
+    setExporting(null);
+  }
 
   return (
     <>
@@ -142,6 +166,13 @@ export default function LibraryScreen() {
           </div>
         )}
       </div>
+
+      {exporting && (
+        <div className="toast" role="status">
+          <span className="toast__spinner" aria-hidden="true" />
+          {exporting.stage} <strong>{exporting.title}</strong>
+        </div>
+      )}
 
       {sheet && (
         <ActionSheet

@@ -3,6 +3,7 @@ import { getSnapshot, getStory, replaceAll, updateStory } from '../storage/stori
 import { saveSettings, loadSettings } from '../storage/settings';
 import { FIXTURE_STORIES } from './fixtures';
 import { reconcileOnce, retryCoverNow } from '../ai/coverReconciler';
+import { buildStoryPdf } from '../pdf/exportStory';
 import { selftest } from './selftest';
 
 /**
@@ -296,6 +297,16 @@ export function install(): void {
     // directly bypasses its in-memory cache and silently diverges.
     updateStory,
     getStory,
+    /** Builds a story's PDF and returns a blob URL, for inspecting the real output. */
+    pdfPreview: async (storyId: string) => {
+      const story = getStory(storyId);
+      if (!story) throw new Error('no such story');
+      const doc = await buildStoryPdf(story);
+      return {
+        pages: doc.getNumberOfPages(),
+        url: URL.createObjectURL(doc.output('blob')),
+      };
+    },
   };
   console.info('[dev] window.__dev ready — try __dev.selftest()');
 }
@@ -315,6 +326,7 @@ declare global {
       retryCoverNow: typeof retryCoverNow;
       updateStory: typeof updateStory;
       getStory: typeof getStory;
+      pdfPreview: (storyId: string) => Promise<{ pages: number; url: string }>;
     };
   }
 }
