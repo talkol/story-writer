@@ -175,7 +175,7 @@ Cloudflare Pages; none of them need a framework preset beyond Vite.
 **GitHub Pages** — already configured. [.github/workflows/deploy.yml](.github/workflows/deploy.yml)
 builds on every push to `main` and publishes via the official Pages actions; you can also
 re-deploy from the Actions tab without a commit. Two files in `public/` reach the site
-root: `CNAME` (the custom domain, `reading.land`) and `.nojekyll` (stops Jekyll
+root: `CNAME` (the custom domain, `reading.quest`) and `.nojekyll` (stops Jekyll
 processing the output).
 
 One-time setup in the repo: **Settings → Pages → Source: GitHub Actions**, then set the
