@@ -534,12 +534,6 @@ body {
   color: var(--tint);
 }
 
-.sheet__note {
-  font-size: 12px;
-  letter-spacing: 0;
-  color: var(--label-3);
-}
-
 @keyframes fade-in {
   from {
     opacity: 0;

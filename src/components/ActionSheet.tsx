@@ -5,7 +5,6 @@ export interface SheetItem {
   onSelect: () => void;
   destructive?: boolean;
   disabled?: boolean;
-  note?: string;
 }
 
 interface Props {
@@ -61,7 +60,6 @@ export default function ActionSheet({ title, message, items, onClose }: Props) {
               onClick={item.onSelect}
             >
               {item.label}
-              {item.note && <span className="sheet__note">{item.note}</span>}
             </button>
           ))}
         </div>

@@ -178,6 +178,20 @@ Routing: hash routes (`#/library`, `#/settings`, `#/story/:id/genre`, `#/story/:
 `#/story/:id/actions`) so the device back gesture works and reloads restore position.
 
 ### 4.1 Library
+
+The per-story `…` menu holds **Export PDF**, **Regenerate cover** (or *Retry cover*),
+**Jump to beginning**, **Jump to end**, and **Remove**. Labels only — the explanatory
+subtitles were dropped, and with them `SheetItem.note`, which nothing else used.
+
+- The two jumps hand `{ jumpTo: 'start' | 'end' }` to the reader in history state, the
+  same channel the Actions screen uses for a chosen action. The reader's anchoring
+  effect consults it *instead of* the stored reading position, then clears it, so a
+  reload does not silently jump the reader again.
+- They open the book rather than only rewriting `readingPosition`: the grid caption
+  reports chapters written, not position, so a silent change would have no visible
+  effect at all. The reader's own debounced save then persists wherever they land.
+- Both are disabled for a story with nothing written.
+
 - Title "Library", styled after iOS Books.
 - 2-column grid of covers at 2:3 portrait. Below each: a chapter-progress caption
   ("Chapter 3 of 20", "30 chapters" before it starts, "20 chapters · Complete" when

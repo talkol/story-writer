@@ -39,10 +39,6 @@ export default function LibraryScreen() {
           {
             label: 'Export PDF',
             disabled: sheet.story.chapters.length === 0,
-            note:
-              sheet.story.chapters.length === 0
-                ? 'Nothing written yet'
-                : 'Cover, chapters and achievements',
             onSelect: () => {
               const story = sheet.story;
               setSheet(null);
@@ -54,10 +50,27 @@ export default function LibraryScreen() {
             // reader does not like.
             label: isCoverPending(sheet.story) ? 'Retry cover' : 'Regenerate cover',
             disabled: coverBlocker() !== null,
-            note: coverNote(sheet.story),
             onSelect: () => {
               regenerateCover(sheet.story.id);
               setSheet(null);
+            },
+          },
+          {
+            label: 'Jump to beginning',
+            disabled: sheet.story.chapters.length === 0,
+            onSelect: () => {
+              const id = sheet.story.id;
+              setSheet(null);
+              navigate(`/story/${id}/read`, { state: { jumpTo: 'start' } });
+            },
+          },
+          {
+            label: 'Jump to end',
+            disabled: sheet.story.chapters.length === 0,
+            onSelect: () => {
+              const id = sheet.story.id;
+              setSheet(null);
+              navigate(`/story/${id}/read`, { state: { jumpTo: 'end' } });
             },
           },
           {
@@ -191,14 +204,6 @@ export default function LibraryScreen() {
 }
 
 /** What the regenerate item should say about itself, given the current state. */
-function coverNote(story: Story): string {
-  const blocker = coverBlocker();
-  if (blocker === 'no-key') return 'Needs an API key';
-  if (blocker === 'offline') return 'Waiting for a connection';
-  if (story.coverJob?.lastError) return story.coverJob.lastError;
-  return isCoverPending(story) ? 'Draws it now' : 'Draws a new one, using your API key';
-}
-
 function describe(story: Story): string {
   const written = chapterCount(story);
   if (story.status === 'finished') return `${story.totalChapters} chapters · Complete`;

@@ -138,6 +138,16 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
     (!readerIsOnPending ||
       (isFirstChapter && titleSeenAtRef.current !== null && !titleHoldDone));
 
+  const location = useLocation();
+  const handoff = location.state as {
+    chosenAction?: string;
+    afterChapters?: number;
+    /** A jump handed over by the Library's menu, in place of the stored position. */
+    jumpTo?: 'start' | 'end';
+  } | null;
+  const chosenAction = handoff?.chosenAction;
+  const jumpTo = handoff?.jumpTo;
+
   /**
    * Anchors the visible page to the stored word offset. Runs on first measurement and
    * again whenever the layout changes — a rotation, a split-view resize, or a
@@ -151,6 +161,15 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
     const layoutSig = `${metrics.columnWidth}x${metrics.pageHeight}`;
     if (anchoredAtRef.current === layoutSig) return;
     anchoredAtRef.current = layoutSig;
+
+    // "Go to beginning" / "Go to end" outrank the stored position: the reader asked
+    // for an end of the book, not for where they left off. Spent immediately so a
+    // reload does not silently jump them again.
+    if (jumpTo) {
+      setPage(clampToStep(jumpTo === 'end' ? pages.length - 1 : 0, step));
+      navigate(location.pathname, { replace: true, state: null });
+      return;
+    }
 
     const { chapterIndex, wordOffset } = story.readingPosition;
     const base = firstPageOfChapter(pages, chapterIndex);
@@ -167,7 +186,7 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
       }
     }
     setPage(clampToStep(Math.min(target, pages.length - 1), step));
-  }, [story, pages, metrics, step]);
+  }, [story, pages, metrics, step, jumpTo, navigate, location.pathname]);
 
   // Persist as a word offset, not a page number: page numbers do not survive a
   // rotation or a font-size change, the word the reader stopped at does.
@@ -263,9 +282,6 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
   }, [go]);
 
   const touchStart = useRef<{ x: number; y: number } | null>(null);
-  const location = useLocation();
-  const handoff = location.state as { chosenAction?: string; afterChapters?: number } | null;
-  const chosenAction = handoff?.chosenAction;
 
   /**
    * The Actions screen hands the chosen sentence over in history state, and it stays
