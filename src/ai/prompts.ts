@@ -173,7 +173,7 @@ export function buildSystemPrompt(story: Story, ctx: ChapterContext): string {
         ? 'None has been awarded yet.'
         : `It has been ${ctx.chaptersSinceLastAchievement} chapter(s) since the last one.`
     } Award one only for a genuinely distinctive turn — on average about once every ${ACHIEVEMENT_EVERY_CHAPTERS} chapters, so most chapters should return null.`,
-    '  "summary": "the whole plot so far in under 500 words, rewritten to include this chapter. Keep the characters, places and established facts that later chapters will need to stay consistent with. Record only what has happened — no plans, no predictions, no intentions for what comes next. A summary that states where the story is heading drags every later choice back toward the same ending"',
+    '  "summary": "the whole plot so far in under 1000 words, rewritten to include this chapter. Keep the characters, places and established facts that later chapters will need to stay consistent with. Record only what has happened — no plans, no predictions, no intentions for what comes next. A summary that states where the story is heading drags every later choice back toward the same ending"',
     '}',
   );
 

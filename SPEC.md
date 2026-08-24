@@ -141,7 +141,7 @@ interface Story {
   chapters: Chapter[];
   achievements: Achievement[];
   pendingActions: string[];         // the 4 choices awaiting the reader; [] when finished
-  summary: string;                  // rolling plot summary, ~500 words, AI-maintained
+  summary: string;                  // rolling plot summary, up to ~1000 words, AI-maintained
   status: 'draft' | 'reading' | 'finished';
   /** Resume anchor. A page number would break on rotate or font-size change. */
   readingPosition: { chapterIndex: number; wordOffset: number };
@@ -414,7 +414,7 @@ fragility of partial-JSON parsing:
 
 ### 6.3 Prompt inputs
 Every generation sends:
-1. Rolling plot summary (~500 words; the model rewrites it each chapter).
+1. Rolling plot summary (up to ~1000 words; the model rewrites it each chapter).
 2. The last ~1000 words of prose verbatim, for voice and immediate continuity. Taken
    from the whole book, not the last chapter, so the window spans chapter boundaries.
 3. Audience, genre, setting — plus a flag if they were just changed.
@@ -550,7 +550,7 @@ After the prose, on its own line, output ===META=== followed by a single JSON ob
    could take next, meaningfully divergent from one another],
   "achievement": null, or {"title": 2-3 words, "description": one sentence} if the
    reader's last choice or this chapter earned a genuine milestone,
-  "summary": the full plot so far in under 500 words, rewritten to include this
+  "summary": the full plot so far in under 1000 words, rewritten to include this
    chapter }
 ```
 
@@ -915,9 +915,12 @@ Measured behaviour worth keeping in mind:
 - **Chapters run long.** Against a 250-word target, actual chapters were 281–382 words
   (mean ~313, about 25% over). The target is a request, not a cap, so a Children's book
   lands nearer 3,100 words than 2,500. Scale the target down if length matters.
-- **The summary self-regulated.** It ranged 232–435 words against the 500-word request
-  and never exceeded it, so the uncapped-summary risk did not materialise here. Still
-  unguarded, though.
+- **The summary self-regulated.** It ranged 232–435 words against what was then a
+  500-word request and never approached it, so the uncapped-summary risk did not
+  materialise. Still unguarded, though — and note the direction: the model wrote roughly
+  half of what it was allowed, so the later raise to 1000 words is a ceiling being
+  lifted, not a length being requested. Expect it to buy detail only where the plot has
+  detail to carry, not to double the summary.
 - **Chapter latency was 17–27s** on `gpt-5` with `reasoning_effort: low`.
 - **Model choice measurably changes adherence.** Head to head on the same Children's
   chapter-one prompt: `gpt-5` averaged 11.3-word sentences and ran 13% over the word
@@ -940,14 +943,16 @@ Measured behaviour worth keeping in mind:
 - **Key exposure.** A browser-held OpenAI key is readable by anything running in this
   origin and by anyone with the device. Acceptable for a personal app; document it in
   Settings, recommend a spend-limited key. If this ever ships publicly, it needs a proxy.
-- **Long-story continuity.** Even a 500-word rolling summary across 30 chapters will
+- **Long-story continuity.** Even a 1000-word rolling summary across 30 chapters will
   lose detail. If drift shows up in testing, add a persistent "story bible" field
   (characters, places, established facts) that the model appends to rather than
   rewrites.
-- **The summary is a request, not a cap.** The prompt asks for under 500 words but
-  nothing truncates what comes back. A model that drifts to 900-word summaries grows
-  every subsequent prompt with no error and no signal — gradual cost creep rather than a
-  failure. The prose window, by contrast, is hard-sliced.
+- **The summary is a request, not a cap.** The prompt asks for under 1000 words but
+  nothing truncates what comes back. A model that overshoots grows every subsequent
+  prompt with no error and no signal — gradual cost creep rather than a failure. Raising
+  the ask from 500 to 1000 doubles the size of that unguarded surface: the summary is
+  re-sent with every chapter, so its length is paid for once per chapter for the rest of
+  the book. The prose window, by contrast, is hard-sliced.
 - **Achievement pacing**, per §6.5. At one per ten chapters a 10-chapter Children's
   book can legitimately end with zero achievements and an empty trophy sheet. If that
   reads as broken rather than rare, the fix is per-audience pacing rather than a lower
