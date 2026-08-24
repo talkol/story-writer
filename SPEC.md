@@ -62,6 +62,22 @@ devices it targets.
   - Adding an icon means copying its codepoint from the package's `style.css` and
     adding the name to `IconName` in `src/components/Icon.tsx`.
 
+- **Name and icon.** The page is titled **Reading Quest**, matching the domain it ships
+  on. The favicon is a hand-drawn open book in `public/favicon.svg` — white on a
+  `#007aff` rounded tile, the same tint the UI uses. It is an SVG rather than an ICO so
+  it stays crisp at every size, and a tinted tile rather than a bare glyph so it holds
+  up against both light and dark tab strips. `apple-touch-icon.png` is the same artwork
+  at 180x180, square and full-bleed because iOS applies its own corner mask. Both hrefs
+  are relative, preserving the `base: './'` property that the build runs from any path.
+
+- **SEO head tags.** A static `description`, a `canonical`, and Open Graph / Twitter
+  card tags, all in `index.html` so they need no JavaScript to be read. Because every
+  route lives in the URL hash, the crawlable document is always the root — a single
+  canonical is correct and the tags never need to vary per route. The card is
+  `summary` rather than `summary_large_image`: the only artwork is the square 180x180
+  icon, and a wide card would letterbox it. OG requires absolute URLs, so those tags
+  hard-code `https://reading.quest/` — the one place the domain appears outside `CNAME`.
+
 ## 2. Core concepts and vocabulary
 
 - **Story** — one book. Has a title, cover, genre triple, pages, achievements, summary.

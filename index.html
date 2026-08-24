@@ -11,15 +11,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Story" />
+    <meta name="apple-mobile-web-app-title" content="Reading Quest" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <!-- Matches --bg in each scheme, so the status bar and browser chrome agree
          with the page instead of showing a stale colour. -->
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="description" content="An AI-written choose-your-own-adventure story maker." />
-    <title>Story App</title>
+    <meta name="description" content="Client side app to write short books and stories with AI" />
+    <!-- Every route lives in the hash, so the crawlable document is always the root.
+         One canonical is therefore correct, and OG needs absolute URLs regardless. -->
+    <link rel="canonical" href="https://reading.quest/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Reading Quest" />
+    <meta property="og:title" content="Reading Quest" />
+    <meta property="og:description" content="Client side app to write short books and stories with AI" />
+    <meta property="og:url" content="https://reading.quest/" />
+    <meta property="og:image" content="https://reading.quest/apple-touch-icon.png" />
+    <meta property="og:image:alt" content="An open book on a blue tile" />
+    <!-- "summary", not "summary_large_image": the only artwork is the square 180px
+         icon, which is what the small card is designed for. A wide card would
+         letterbox it. -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Reading Quest" />
+    <meta name="twitter:description" content="Client side app to write short books and stories with AI" />
+    <meta name="twitter:image" content="https://reading.quest/apple-touch-icon.png" />
+    <!-- Hrefs are relative so the icons resolve under a sub-path build too; the
+         hash router never changes the document base, so this stays correct. -->
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <title>Reading Quest</title>
   </head>
   <body>
     <div id="root"></div>
