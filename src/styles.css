@@ -1109,6 +1109,187 @@ body {
   }
 }
 
+/* ---- Page turn, two-page spread ------------------------------------------ */
+
+/*
+ * A spread does not turn two pages, it turns one sheet across the gutter.
+ *
+ * The earlier attempt animated both columns at once, each pivoting on its inner edge,
+ * which folded the two pages inward and slid the new ones in from the outer margins —
+ * a book closing, not a page turning. What actually happens is that the right-hand page
+ * lifts at its outer edge, sweeps left over the spine, and lands as the new left-hand
+ * page: one sheet, printed on both sides, pivoting on the middle.
+ *
+ * Named `flipsheet`, not `sheet`: `.sheet` already belongs to the modal action sheet,
+ * whose `max-width: 440px` and `animation` shorthand silently applied to this and
+ * broke it.
+ *
+ * So the sheet spans from the centre of the gutter to the outer edge of the right page
+ * and pivots on its left edge. Rotated 180° it comes to rest exactly over the left page
+ * box, which is what makes its back face the new left-hand page. The pages inside the
+ * faces hug the sheet's outer edge — in the flipped, mirrored face that outer edge is
+ * the screen's left, so one rule places both correctly.
+ */
+.spread--double {
+  position: relative;
+}
+
+.flipsheet {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 50%;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  animation-name: flipsheet-turn;
+  animation-duration: var(--turn-ms, 380ms);
+  /*
+   * Symmetric easing, unlike the single-page turn, and deliberately so: with it, half
+   * the time is exactly half the rotation, so edge-on falls at 50% and every keyframe
+   * below can be reasoned about in degrees. Under the front-loaded curve the single
+   * page uses, 90° would arrive at 35% and all of this would silently drift.
+   */
+  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  animation-fill-mode: forwards;
+  will-change: transform;
+}
+
+/* Going back is the same sheet on the same hinge, run the other way. */
+.flipsheet--reverse,
+.flipsheet--reverse .flipsheet__face > .page,
+.flipsheet--reverse .flipsheet__face::after {
+  animation-direction: reverse;
+}
+
+.flipsheet__face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  background: var(--bg);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/*
+ * The back face is mirrored by its own 180°, so hugging the sheet's outer edge means
+ * the opposite end of the box from the front face. Both then land flush with the page
+ * box they are standing in for — the right one before the turn, the left one after.
+ */
+.flipsheet__face--back {
+  transform: rotateY(180deg);
+  justify-content: flex-start;
+}
+
+/*
+ * The text steps aside for the edge-on moment.
+ *
+ * At 90° the sheet is a hairline down the spine, and a page of type resampled into a
+ * hairline is the same band of noise that used to flicker on the single-page turn — only
+ * here it lands in the middle of the spread. The faces stay opaque, so what compresses
+ * is a plain background; only the type fades, and only across 75°–105°, which is where
+ * it would be illegible anyway.
+ */
+.flipsheet__face > .page {
+  animation-duration: var(--turn-ms, 380ms);
+  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  animation-fill-mode: forwards;
+}
+
+.flipsheet__face--front > .page {
+  animation-name: flipsheet-ink-out;
+}
+
+.flipsheet__face--back > .page {
+  animation-name: flipsheet-ink-in;
+}
+
+/* Darkest at the spine it pivots on, thinning toward the outer edge. */
+.flipsheet__face::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.06));
+  animation-duration: var(--turn-ms, 380ms);
+  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  animation-fill-mode: forwards;
+}
+
+.flipsheet__face--front::after {
+  animation-name: flipsheet-shade-out;
+}
+
+.flipsheet__face--back::after {
+  animation-name: flipsheet-shade-in;
+}
+
+@keyframes flipsheet-turn {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(-180deg);
+  }
+}
+
+/*
+ * Percentages are time; the degrees beside them are what those instants correspond to,
+ * which is the whole reason this animation uses a symmetric easing. 40.6% is 60°,
+ * 45.4% is 75°, 54.6% is 105°, 59.4% is 120°.
+ *
+ * The type stays fully legible until 60°, clears the 75°–105° window where the sheet is
+ * too edge-on to render it without aliasing, and is back by 120°.
+ */
+@keyframes flipsheet-ink-out {
+  from {
+    opacity: 1;
+  }
+  40.6% {
+    opacity: 1;
+  }
+  45.4% {
+    opacity: 0;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes flipsheet-ink-in {
+  from {
+    opacity: 0;
+  }
+  54.6% {
+    opacity: 0;
+  }
+  59.4% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes flipsheet-shade-out {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes flipsheet-shade-in {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .leaf::after {
     display: none;

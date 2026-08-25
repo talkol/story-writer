@@ -97,9 +97,15 @@ export function computeMetrics(
 /**
  * A two-page spread only makes sense when the stage is genuinely wide — an iPad in
  * landscape, not a phone turned sideways, where two columns would be unreadably narrow.
+ *
+ * The threshold has to clear the phones to mean that. At 820 it did not: an iPhone 16
+ * Pro is 874pt wide on its side and an iPhone 16 Pro Max is 956, so both were being
+ * given a spread — two ~350pt columns about eight lines tall, which is precisely the
+ * case this function exists to avoid. 1000 sits above every iPhone and below every iPad
+ * in landscape (the smallest, the mini, is 1133).
  */
 export function shouldSpread(stageWidth: number, stageHeight: number): boolean {
-  return stageWidth >= 820 && stageWidth > stageHeight;
+  return stageWidth >= 1000 && stageWidth > stageHeight;
 }
 
 /** Pages a flow of this height occupies. Always at least one, even when empty. */

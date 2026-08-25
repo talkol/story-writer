@@ -111,6 +111,24 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
   const visiblePage = turn ? turn.to : page;
 
   /**
+   * The four pages involved in turning a two-page spread.
+   *
+   * A spread turn moves one sheet across the gutter. Numbering the earlier spread
+   * [n, n+1] and the later one [n+2, n+3], that sheet is the inner pair: n+1 is printed
+   * on the side facing the reader before the turn, n+2 on the side facing them after.
+   * The outer pages are the ones that never move — n waits on the left to be covered as
+   * the sheet lands, n+3 sits on the right already uncovered.
+   *
+   * Both directions use the same four pages; only the sheet's rotation reverses, which
+   * is why this is derived from the lower spread rather than from `from`/`to`.
+   */
+  const spreadTurn = useMemo(() => {
+    if (!turn || step !== 2) return null;
+    const lower = Math.min(turn.from, turn.to);
+    return { staticLeft: lower, front: lower + 1, back: lower + 2, staticRight: lower + 3 };
+  }, [turn, step]);
+
+  /**
    * The index the arriving chapter will occupy. While a request is in flight
    * `story.chapters` still holds only committed chapters, so its length is exactly the
    * index `displayStory` gives the streaming copy.
@@ -410,7 +428,35 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
           <div className="stage__inner" ref={stageRef}>
           {metrics && pages.length > 0 && (
             <div className={`spread${metrics.columns === 2 ? ' spread--double' : ''}`}>
-              {Array.from({ length: metrics.columns }, (_, column) => {
+              {metrics.columns === 2 && turn ? (
+                /*
+                 * A spread turns ONE sheet across the gutter. The sheet carries the
+                 * inner two pages — the right-hand page on its front, the page that
+                 * becomes the new left-hand page on its back — and pivots on the spine.
+                 * The outer two pages never move: the old left page waits to be covered,
+                 * the new right page is already there to be uncovered.
+                 */
+                <>
+                  <div className="leafbox">
+                    <Page story={displayStory!} pages={pages} index={spreadTurn!.staticLeft} metrics={metrics} />
+                  </div>
+                  <div className="leafbox">
+                    <Page story={displayStory!} pages={pages} index={spreadTurn!.staticRight} metrics={metrics} />
+                  </div>
+                  <div
+                    className={`flipsheet${turn.direction === 'back' ? ' flipsheet--reverse' : ''}`}
+                    style={{ '--turn-ms': `${TURN_MS}ms` } as React.CSSProperties}
+                  >
+                    <div className="flipsheet__face flipsheet__face--front">
+                      <Page story={displayStory!} pages={pages} index={spreadTurn!.front} metrics={metrics} />
+                    </div>
+                    <div className="flipsheet__face flipsheet__face--back">
+                      <Page story={displayStory!} pages={pages} index={spreadTurn!.back} metrics={metrics} />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                Array.from({ length: metrics.columns }, (_, column) => {
                 /*
                  * Which page sits still and which one moves depends on the direction.
                  *
@@ -447,7 +493,8 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
                     )}
                   </div>
                 );
-              })}
+              })
+              )}
             </div>
           )}
 

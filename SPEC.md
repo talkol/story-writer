@@ -267,6 +267,44 @@ around the spine edge — the left edge going forward, the right going back.
   percentages are time, and time is not angle. Ending the rotation at 62° instead means
   the leaf never drops below 47% of its width at any point in the timeline, under any
   easing, so the sliver cannot be drawn at all.
+**A spread needs a genuinely wide stage.** `shouldSpread` requires 1000pt, not the 820
+it used to: an iPhone 16 Pro is 874pt on its side and a Pro Max is 956, so both were
+being given a two-page spread of ~350pt columns about eight lines tall — precisely the
+case the check exists to prevent. 1000 clears every iPhone and still catches every iPad
+in landscape, the smallest being the mini at 1133.
+
+**The two-page spread turns a sheet, not two pages.** It has its own render branch and
+its own CSS (`.flipsheet`), because it is a different motion, not a wider version of the
+single-page one.
+
+- Numbering the earlier spread `[n, n+1]` and the later one `[n+2, n+3]`, the sheet
+  carries the *inner* pair: `n+1` on the face toward the reader before the turn, `n+2` on
+  the face toward them after. The outer pages never move — `n` waits on the left to be
+  covered, `n+3` sits on the right already uncovered. Both directions use the same four
+  pages; only the rotation reverses, which is why they are derived from the lower spread
+  rather than from `from`/`to`.
+- The sheet spans from the centre of the gutter to the outer edge of the right page and
+  pivots on its left edge, so a 180° rotation lands it exactly over the left page box.
+  Verified: front page at 0° occupies 570–1100, the right page box exactly; back page at
+  180° occupies 0–530, the left page box exactly.
+- The back face carries its own 180°, so "hug the outer edge" is the *opposite* end of
+  the box for it than for the front — `flex-end` on one, `flex-start` on the other.
+- **Symmetric easing** (`cubic-bezier(0.45, 0, 0.55, 1)`), unlike the single-page turn.
+  With it, half the time is exactly half the rotation, so edge-on falls at 50% and the
+  ink keyframes can be reasoned about in degrees. Under the front-loaded curve, 90° would
+  arrive at 35% and every one of those keyframes would silently drift.
+- The type fades out between 60° and 75° and back in between 105° and 120°. At 90° the
+  sheet is a hairline down the spine, and a page of type resampled into a hairline is the
+  same aliasing that flickered on the single-page turn. The faces stay opaque, so what
+  compresses is a plain background.
+- It is named `flipsheet` because `.sheet` already belongs to the modal action sheet,
+  whose `max-width: 440px` and `animation` shorthand silently applied to it and broke it.
+  The symptom was a sheet 440px wide instead of 550.
+
+**What it replaced**, so it is not reintroduced: both columns animated at once, each
+pivoting on its inner edge. That folded the two pages inward and slid the new ones in
+from the outer margins — a book closing, not a page turning.
+
 - `transform-style: preserve-3d` was removed from the leaf. Nothing inside it is
   3D-transformed, so it bought nothing, and it is a known source of compositing flicker
   in WebKit. `.leafbox` keeps it, which is what carries the perspective down.
