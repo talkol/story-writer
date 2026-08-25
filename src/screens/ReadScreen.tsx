@@ -411,20 +411,36 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
           {metrics && pages.length > 0 && (
             <div className={`spread${metrics.columns === 2 ? ' spread--double' : ''}`}>
               {Array.from({ length: metrics.columns }, (_, column) => {
-                const index = (turn ? turn.to : page) + column;
-                const leavingIndex = turn ? turn.from + column : -1;
+                /*
+                 * Which page sits still and which one moves depends on the direction.
+                 *
+                 * Forward, the page being left lifts away and the new one is revealed
+                 * underneath it. Back is that same motion in reverse, so the roles swap:
+                 * the page being left stays put underneath, and the page being returned
+                 * to swings back down on top of it. Getting this the wrong way round
+                 * makes the destination page look like it appears part-way through the
+                 * turn, when it should have been there from the first frame.
+                 */
+                const back = turn?.direction === 'back';
+                const restingIndex = (turn ? (back ? turn.from : turn.to) : page) + column;
+                const movingIndex = turn ? (back ? turn.to : turn.from) + column : -1;
                 return (
                   <div className="leafbox" key={column}>
-                    <Page story={displayStory!} pages={pages} index={index} metrics={metrics} />
+                    <Page story={displayStory!} pages={pages} index={restingIndex} metrics={metrics} />
                     {turn && (
                       <div
-                        className={`leaf leaf--${spineSide(metrics.columns, column, turn.direction)}`}
-                        style={{ animationDuration: `${TURN_MS}ms` }}
+                        className={`leaf leaf--${spineSide(metrics.columns, column)}${
+                          back ? ' leaf--reverse' : ''
+                        }`}
+                        // A custom property rather than `animationDuration`, because the
+                        // shade layer is a pseudo-element and cannot be given an inline
+                        // style of its own.
+                        style={{ '--turn-ms': `${TURN_MS}ms` } as React.CSSProperties}
                       >
                         <Page
                           story={displayStory!}
                           pages={pages}
-                          index={leavingIndex}
+                          index={movingIndex}
                           metrics={metrics}
                         />
                       </div>
@@ -675,16 +691,13 @@ function countProseChaptersTo(story: Story, chapterIndex: number): number {
 
 /**
  * Which edge the leaf pivots on. In a single-page view the spine is always the left
- * edge going forward and the right edge going back. In a spread the spine is the
- * inner edge, so the left-hand page pivots on its right edge and the right-hand page
- * on its left — the same way a real book opens.
+ * edge, in both directions — a back turn is the forward turn played backwards, not a
+ * mirror of it, so it pivots on the same edge. In a spread the spine is the inner edge,
+ * so the left-hand page pivots on its right edge and the right-hand page on its left —
+ * the same way a real book opens.
  */
-function spineSide(
-  columns: number,
-  column: number,
-  direction: 'forward' | 'back',
-): 'left' | 'right' {
-  if (columns === 1) return direction === 'forward' ? 'left' : 'right';
+function spineSide(columns: number, column: number): 'left' | 'right' {
+  if (columns === 1) return 'left';
   return column === 0 ? 'right' : 'left';
 }
 

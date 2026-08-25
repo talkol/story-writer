@@ -249,6 +249,52 @@ Two modes, same component:
 
 ### 4.4 Read
 
+**Page turn.** The outgoing page is drawn on top of the incoming one and rotates away
+around the spine edge — the left edge going forward, the right going back.
+
+- The rotation **stops at 62°** and the leaf fades to nothing as it gets there, rather
+  than turning past 90° and relying on a hidden backface. This is a bug fix, not
+  decoration. Past roughly 65° the perspective projection squeezes the whole page into a
+  few millimetres at the hinge; WebKit resamples the text down into that sliver and
+  paints a band of high-contrast noise, which then disappears as the backface takes
+  over. On an iPhone that read as a blink about half a centimetre wide along the pivot
+  edge — the left edge going forward, which is the side a forward turn pivots on.
+- **Fading across the noisy phase is not enough**, and the reason is worth keeping.
+  With `cubic-bezier(0.4, 0, 0.2, 1)` the rotation is heavily front-loaded: the leaf is
+  already at 64° by 40% of the timeline and past 90° by 60%. A fade over 40–60%
+  therefore runs exactly across the noisy phase and leaves it on screen, merely
+  semi-transparent — which is what the first attempt at this fix did. Keyframe
+  percentages are time, and time is not angle. Ending the rotation at 62° instead means
+  the leaf never drops below 47% of its width at any point in the timeline, under any
+  easing, so the sliver cannot be drawn at all.
+- `transform-style: preserve-3d` was removed from the leaf. Nothing inside it is
+  3D-transformed, so it bought nothing, and it is a known source of compositing flicker
+  in WebKit. `.leafbox` keeps it, which is what carries the perspective down.
+- **The leaf stays opaque through 60° of its 62°**, fading only over the last fifth of
+  the timeline (~76ms of the 380). `opacity` fades an element's background along with
+  its content, so a fade spread across the turn made the page underneath show through
+  and read as a transparent page.
+- **The lifting page darkens with its angle** — a wash strongest at the hinge, thinning
+  toward the free edge, since a page tilting out of a book turns away from the light and
+  the gutter falls into shadow first. It rides inside the leaf as a pseudo-element, so it
+  rotates and leaves with it. It shares the leaf's timing function, which is what ties
+  the darkening to the angle rather than to the clock: both run off the same eased
+  progress, so it tracks the rotation at any duration.
+- **A back turn is the forward turn played backwards, not mirrored.** The roles of the
+  two pages swap: forward, the page being left lifts away and the destination is
+  revealed underneath; back, the page being left *stays put* and the destination swings
+  down on top of it. Getting this the wrong way round made the destination page look as
+  though it appeared part-way through the turn, when it should be there from the first
+  frame. It follows that both directions pivot on the *same* edge — `spineSide` no
+  longer mirrors — and the whole animation, shading included, is simply run with
+  `animation-direction: reverse`.
+- Reproduced by freezing the keyframes at a fixed angle and running the app in Safari on
+  the iOS Simulator: at −45° the leaf renders cleanly, at −82° the band of garbled text
+  is plainly visible at the hinge. Worth remembering as a technique — the artifact is
+  temporal and cannot be caught by screenshotting a 380ms animation.
+- `will-change: transform` keeps the leaf on its own composited layer.
+
+
 **While a chapter is being written**, a cover fills the stage showing the book's title
 and which chapter is on its way. Without it the reader is stranded on the last page of
 the previous chapter — a page they have just finished, with nothing after it to turn to

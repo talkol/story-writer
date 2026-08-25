@@ -981,10 +981,65 @@ body {
   inset: 0;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  transform-style: preserve-3d;
   background: var(--bg);
   animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-duration: var(--turn-ms, 380ms);
   animation-fill-mode: forwards;
+  /* Promotes the leaf to its own composited layer, so iOS transforms a rasterised page
+     rather than re-rendering it every frame. */
+  will-change: transform;
+}
+
+/*
+ * The light the lifting page loses.
+ *
+ * A page tilting up out of a book turns away from the light, and the gutter it hinges on
+ * falls into shadow first — so the wash is strongest at the hinge and thins toward the
+ * free edge, and it deepens as the angle opens.
+ *
+ * It rides *inside* the leaf, so it rotates and fades out with it and needs no separate
+ * geometry. Sharing the leaf's timing function is what ties it to the angle rather than
+ * to the clock: both are driven by the same eased progress, so the darkening tracks the
+ * rotation exactly, at any duration.
+ */
+.leaf::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  animation-name: leaf-shade;
+  animation-duration: var(--turn-ms, 380ms);
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: forwards;
+}
+
+/*
+ * A back turn is the forward turn run backwards: the same hinge, the same rotation, the
+ * same shading, played from the far end. That means the leaf starts folded open at 62°,
+ * already dark, and swings down flat and light — landing on top of the page the reader
+ * is leaving, which never moves.
+ */
+.leaf--reverse,
+.leaf--reverse::after {
+  animation-direction: reverse;
+}
+
+.leaf--left::after {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.08));
+}
+
+.leaf--right::after {
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.08));
+}
+
+@keyframes leaf-shade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .leaf--left {
@@ -999,26 +1054,66 @@ body {
   box-shadow: -3px 0 18px rgba(0, 0, 0, 0.2);
 }
 
+/*
+ * The leaf stops well short of edge-on, and fades out as it goes.
+ *
+ * The artifact this avoids: past roughly 65° the perspective projection squeezes the
+ * whole page into a few millimetres at the hinge, WebKit resamples the text down into
+ * that sliver, and the result is a band of high-contrast noise that then vanishes as
+ * the hidden backface takes over. On an iPhone it reads as a blink about half a
+ * centimetre wide along the pivot edge — the left edge going forward, since that is the
+ * side a forward turn pivots on.
+ *
+ * Fading across that zone is NOT enough, and the reason is worth recording: with
+ * `cubic-bezier(0.4, 0, 0.2, 1)` the rotation is heavily front-loaded, so the leaf is
+ * already at 64° by 40% of the timeline and past 90° by 60%. A fade placed over
+ * 40–60% therefore runs exactly across the noisy phase and leaves it visible, merely
+ * semi-transparent. Keyframe percentages are time, and time is not angle.
+ *
+ * So the rotation simply stops at 62°, where the leaf is still 47% of its width and
+ * renders honestly. The sliver is never drawn at any point in the timeline, at any
+ * easing.
+ *
+ * The leaf still has to leave, and `opacity` is what removes it — which fades its
+ * background along with its text, so while it is fading the page underneath shows
+ * through it. That reads as a transparent page, so the fade is confined to the last
+ * fifth of the timeline: the leaf is fully opaque through the first 60° of its 62°
+ * rotation, and only lets go over the final couple of degrees, by which point the shade
+ * has it at its darkest. At the shipping 380ms that tail is about 75ms.
+ */
 @keyframes leaf-hinge-left {
   from {
     transform: rotateY(0deg);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
   }
   to {
-    /* Past 90° so the hidden backface has fully taken the leaf out of view. */
-    transform: rotateY(-105deg);
+    transform: rotateY(-62deg);
+    opacity: 0;
   }
 }
 
 @keyframes leaf-hinge-right {
   from {
     transform: rotateY(0deg);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
   }
   to {
-    transform: rotateY(105deg);
+    transform: rotateY(62deg);
+    opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .leaf::after {
+    display: none;
+  }
+
   .leaf--left,
   .leaf--right {
     transform-origin: center;
