@@ -252,26 +252,28 @@ Two modes, same component:
 **Page turn.** The outgoing page is drawn on top of the incoming one and rotates away
 around the spine edge — the left edge going forward, the right going back.
 
-- The rotation **stops at 62°** and the leaf fades to nothing as it gets there, rather
-  than turning past 90° and relying on a hidden backface. This is a bug fix, not
-  decoration. Past roughly 65° the perspective projection squeezes the whole page into a
-  few millimetres at the hinge; WebKit resamples the text down into that sliver and
-  paints a band of high-contrast noise, which then disappears as the backface takes
-  over. On an iPhone that read as a blink about half a centimetre wide along the pivot
-  edge — the left edge going forward, which is the side a forward turn pivots on.
-- **Fading across the noisy phase is not enough**, and the reason is worth keeping.
-  With `cubic-bezier(0.4, 0, 0.2, 1)` the rotation is heavily front-loaded: the leaf is
-  already at 64° by 40% of the timeline and past 90° by 60%. A fade over 40–60%
-  therefore runs exactly across the noisy phase and leaves it on screen, merely
-  semi-transparent — which is what the first attempt at this fix did. Keyframe
-  percentages are time, and time is not angle. Ending the rotation at 62° instead means
-  the leaf never drops below 47% of its width at any point in the timeline, under any
-  easing, so the sliver cannot be drawn at all.
-**A spread needs a genuinely wide stage.** `shouldSpread` requires 1000pt, not the 820
-it used to: an iPhone 16 Pro is 874pt on its side and a Pro Max is 956, so both were
-being given a two-page spread of ~350pt columns about eight lines tall — precisely the
-case the check exists to prevent. 1000 clears every iPhone and still catches every iPad
-in landscape, the smallest being the mini at 1133.
+**Both layouts turn a sheet.** The single page uses the same `.flipsheet` as the spread,
+sized to the whole page and hinged on its outer edge, so 180° carries it clean off the
+stage — which `.stage`'s `overflow: hidden` clips. Only the geometry differs between the
+two (`--single` vs `--spread`); the rotation, the shading and the ink handling are shared.
+
+- **Nothing fades.** The sheet's opacity is 1 for the whole turn, verified at every point
+  in the timeline. The page leaves because it has gone, not because it dissolved, so the
+  page underneath is never visible through it.
+- Its back is blank, which is what the back of a page is.
+- Going back is the same sheet with `animation-direction: reverse`, so it needs no
+  separate geometry or keyframes: the page starts a full 180° over, off the left of the
+  stage with its blank back toward the reader, swings in past edge-on, takes its type
+  back at 60°, and lands flat. The page being left sits still underneath the whole time.
+  Measured across the timeline: 180° off-stage at the start, 0° filling the page at the
+  end, opacity 1 at every point in between.
+- This replaced an earlier single-page animation that rotated only to 62° and faded out
+  over the last fifth of the timeline. That worked, but the fade was a compromise forced
+  by stopping short of edge-on: `opacity` fades an element's background along with its
+  content, so while it faded the next page showed through. Carrying the rotation all the
+  way through removes the need for it. The history is worth keeping because both problems
+  it was solving are still live and are now solved differently — see the ink note below
+  for the edge-on aliasing, and the geometry note for where the page goes.
 
 **The two-page spread turns a sheet, not two pages.** It has its own render branch and
 its own CSS (`.flipsheet`), because it is a different motion, not a wider version of the

@@ -444,7 +444,9 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
                     <Page story={displayStory!} pages={pages} index={spreadTurn!.staticRight} metrics={metrics} />
                   </div>
                   <div
-                    className={`flipsheet${turn.direction === 'back' ? ' flipsheet--reverse' : ''}`}
+                    className={`flipsheet flipsheet--spread${
+                      turn.direction === 'back' ? ' flipsheet--reverse' : ''
+                    }`}
                     style={{ '--turn-ms': `${TURN_MS}ms` } as React.CSSProperties}
                   >
                     <div className="flipsheet__face flipsheet__face--front">
@@ -474,21 +476,38 @@ export default function ReadScreen({ showAchievements = false }: { showAchieveme
                   <div className="leafbox" key={column}>
                     <Page story={displayStory!} pages={pages} index={restingIndex} metrics={metrics} />
                     {turn && (
+                      /*
+                       * The same sheet the spread uses, sized to the whole page and
+                       * hinged on its outer edge, so 180° carries it off the stage
+                       * instead of fading it away. Its back is blank, because that is
+                       * what the back of a page is.
+                       */
                       <div
-                        className={`leaf leaf--${spineSide(metrics.columns, column)}${
-                          back ? ' leaf--reverse' : ''
+                        className={`flipsheet flipsheet--single${
+                          back ? ' flipsheet--reverse' : ''
                         }`}
                         // A custom property rather than `animationDuration`, because the
                         // shade layer is a pseudo-element and cannot be given an inline
                         // style of its own.
                         style={{ '--turn-ms': `${TURN_MS}ms` } as React.CSSProperties}
                       >
-                        <Page
-                          story={displayStory!}
-                          pages={pages}
-                          index={movingIndex}
-                          metrics={metrics}
-                        />
+                        <div className="flipsheet__face flipsheet__face--front">
+                          <Page
+                            story={displayStory!}
+                            pages={pages}
+                            index={movingIndex}
+                            metrics={metrics}
+                          />
+                        </div>
+                        <div className="flipsheet__face flipsheet__face--back">
+                          <div
+                            className="page flipsheet__back-blank"
+                            style={{
+                              width: metrics.pageBoxWidth,
+                              height: metrics.pageBoxHeight,
+                            }}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -734,18 +753,6 @@ function countProseChaptersTo(story: Story, chapterIndex: number): number {
     if (story.chapters[i].kind === 'prose') n++;
   }
   return Math.max(1, n);
-}
-
-/**
- * Which edge the leaf pivots on. In a single-page view the spine is always the left
- * edge, in both directions — a back turn is the forward turn played backwards, not a
- * mirror of it, so it pivots on the same edge. In a spread the spine is the inner edge,
- * so the left-hand page pivots on its right edge and the right-hand page on its left —
- * the same way a real book opens.
- */
-function spineSide(columns: number, column: number): 'left' | 'right' {
-  if (columns === 1) return 'left';
-  return column === 0 ? 'right' : 'left';
 }
 
 /** Keeps the spread aligned so a two-up view always starts on an even page. */
