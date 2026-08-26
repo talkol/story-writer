@@ -126,6 +126,28 @@ export const FIXTURE_STORIES: Story[] = [
       'Row out past the edge of the charts and meet the ship yourself.',
       'Search your grandfather’s room for the harbour codes he never taught you.',
     ],
+    cast: [
+      {
+        name: 'Mira Auldwen',
+        bio: 'A ferryman’s daughter in the flooded town of Ashmoor, seventeen and already known for going where she is told not to. She asks the question everyone else has agreed to leave alone.',
+      },
+      {
+        name: 'Sevrin Auldwen',
+        bio: 'Mira’s aunt, who keeps the harbour ledgers and a great many things besides. She has spent thirty years making the past sound tidier than it was.',
+      },
+      {
+        name: 'Tolm',
+        bio: 'The boy on the causeway, carrying a lantern that burns dark. He is entirely untroubled by it, which is the most frightening thing about him.',
+      },
+      {
+        name: 'Halder Auldwen',
+        bio: 'Mira’s grandfather, who rang three bells sixty years ago and set the lantern down. He has not spoken since, and writes only when the tide is out.',
+      },
+      {
+        name: 'Nessa Cobb',
+        bio: 'The bellwright’s widow, the only one in Ashmoor who still counts the rings. Sharp, unsentimental, and the first to believe Mira.',
+      },
+    ],
     summary:
       'Mira, a girl in the flooded town of Ashmoor, hears three bells from a tower that has been underwater for sixty years — the old harbour code for an unexpected ship. On the causeway she meets a boy carrying a lantern that burns darkness instead of light. She refuses it; it comes to her anyway, and the world politely refuses to see it. Her aunt Sevrin recognises the lantern: Mira’s grandfather carried it for eleven years and lost his voice setting it down. It cannot be put down safely, only passed on. Sixty years ago he rang three bells and abandoned the light, and the ship he summoned has been circling beyond the charts ever since, waiting.',
     status: 'reading',
@@ -155,6 +177,28 @@ export const FIXTURE_STORIES: Story[] = [
       'Follow the crows to find out where the apple came from.',
       'Wait until night, when the tree might be sleepy.',
     ],
+    cast: [
+      {
+        name: 'Biscuit',
+        bio: 'A small rabbit with one floppy ear who lives under the roots of the great oak. He says yes to things before he has worked out how.',
+      },
+      {
+        name: 'Pockle',
+        bio: 'An old badger who digs the deepest holes in the wood. He grumbles at everyone and helps them anyway.',
+      },
+      {
+        name: 'Wren',
+        bio: 'A very small bird who sees everything from the top of the tree. She tells Biscuit what is up there, one word at a time.',
+      },
+      {
+        name: 'Grib',
+        bio: 'The loudest of the crows, who thinks the golden apple belongs to him. He laughs first and looks second.',
+      },
+      {
+        name: 'Mother Thistle',
+        bio: 'The hedgehog who mends things at the edge of the meadow. She has never once been in a hurry.',
+      },
+    ],
     summary:
       'Biscuit, a small rabbit with one floppy ear, wants a golden apple at the top of a great oak tree that nobody can reach. The crows mock him. He claims to have a ladder, which he does not.',
     status: 'reading',
@@ -173,6 +217,28 @@ export const FIXTURE_STORIES: Story[] = [
     chapters: [],
     achievements: [],
     pendingActions: [],
+    cast: [
+      {
+        name: 'Odile Marchetti',
+        bio: 'A night-shift dispatcher for a private ambulance firm, and the only person who hears the city before the police do. She has learned exactly how much not to write down.',
+      },
+      {
+        name: 'Emmerich Sarr',
+        bio: 'A pawnbroker on Halsey Street who has outlived three sets of partners. He is unfailingly polite and has never once raised his voice.',
+      },
+      {
+        name: 'Junie Okonkwo-Reyes',
+        bio: 'A forensic accountant seconded to a case nobody wants closed. She reads people the way she reads a ledger, slowly and without blinking.',
+      },
+      {
+        name: 'Del Varga',
+        bio: 'A tow-truck driver who moves more than cars. Cheerful, incurious by policy, and owed favours by half the district.',
+      },
+      {
+        name: 'Inspector Rusanov',
+        bio: 'Eleven months from a pension he intends to collect. He has stopped asking questions whose answers would require paperwork.',
+      },
+    ],
     summary: '',
     status: 'draft',
     readingPosition: { chapterIndex: 0, wordOffset: 0 },

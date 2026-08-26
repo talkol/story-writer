@@ -43,6 +43,13 @@ export const AUDIENCE_PROFILE: Record<
   Adults: { totalChapters: 20, wordsPerChapter: 800, label: 'a long book, 20 chapters' },
 };
 
+/** One of the book's principal characters, named before any prose exists. */
+export interface CastMember {
+  name: string;
+  /** Two sentences: who they are and what they are like. */
+  bio: string;
+}
+
 export interface Achievement {
   id: string;
   title: string;
@@ -103,6 +110,14 @@ export interface Story {
   achievements: Achievement[];
   /** The 4 choices awaiting the reader. Empty when generating or finished. */
   pendingActions: string[];
+  /**
+   * The principal characters, named up front alongside the title.
+   *
+   * Optional because stories created before casts existed have none, and because the
+   * naming call can fail — the book is still readable without it. Absent means the
+   * chapter prompt simply omits the block.
+   */
+  cast?: CastMember[];
   /** Rolling plot summary, up to ~1000 words, rewritten by the model each chapter. */
   summary: string;
   status: StoryStatus;

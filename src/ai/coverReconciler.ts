@@ -1,10 +1,10 @@
 import { checkImageAccess, generateCover, PromptRefusedError } from './cover';
-import { generateTitle } from './title';
+import { nameStory } from './title';
 import { ApiError } from './stream';
 import { deleteCover, normalizeCover, putCover } from '../storage/covers.idb';
 import { loadSettings } from '../storage/settings';
 import { getSnapshot, newId, subscribe, updateStory } from '../storage/stories';
-import type { CoverJob, Story } from '../types';
+import { chapterCount, type CoverJob, type Story } from '../types';
 
 /**
  * Keeps every titled story supplied with a cover, healing failures over time.
@@ -181,6 +181,23 @@ export function isCoverPending(story: Story): boolean {
   return !story.coverImageId;
 }
 
+/**
+ * Whether this story still needs its cast named.
+ *
+ * Only before a word is written. A book already part-way through has its people
+ * established in prose, and handing the model a cast invented after the fact would
+ * contradict names the reader has already read — worse than having no cast at all,
+ * which simply leaves the model naming people as it goes, the way it did before casts
+ * existed.
+ *
+ * Deliberately independent of the title. Naming used to happen only for untitled
+ * stories, which meant a titled but unwritten book — every story created before casts
+ * existed, and any whose title arrived first — could never get one.
+ */
+export function isCastPending(story: Story): boolean {
+  return chapterCount(story) === 0 && !story.cast?.length;
+}
+
 /** Why the reconciler cannot currently do any work, if anything. */
 export type CoverBlocker = 'no-key' | 'offline' | null;
 
@@ -222,7 +239,7 @@ export function coverStatus(): {
 }
 
 function eligible(story: Story, now: number): boolean {
-  if (!isCoverPending(story)) return false;
+  if (!isCoverPending(story) && !isCastPending(story)) return false;
   const job = coverJobOf(story);
   if ((job.leaseUntil ?? 0) > now) return false; // another tab is on it
   return job.nextAttemptAt <= now;
@@ -280,21 +297,44 @@ async function attemptCover(
     // leased and silently stall this story.
     updateStory(story.id, { coverJob: { ...job, leaseUntil: now + LEASE_MS } });
 
-    // The cover has the title printed on it, so name the book first if nothing has.
-    // Stored immediately, so a failed cover never pays to name the book twice.
-    let titled = story;
-    if (!titled.title.trim()) {
-      const title = await generateTitle({
-        story: titled,
+    /*
+     * Naming comes first, because the cover has the title printed on it. It is stored
+     * immediately, so a cover that then fails never pays to name the book twice.
+     *
+     * One call supplies both the title and the cast, and either may be what is missing:
+     * a new story needs both, a story titled before casts existed needs only the cast.
+     * An existing title is kept — the model's is discarded — so healing a cast can never
+     * rename a book the reader already knows.
+     */
+    let named = story;
+    if (!named.title.trim() || isCastPending(named)) {
+      const { title, cast } = await nameStory({
+        story: named,
         apiKey,
         signal: AbortSignal.timeout(60_000),
       });
-      titled = updateStory(story.id, { title }) ?? { ...titled, title };
-      console.info(`[covers] named story "${title}"`);
+      const patch = {
+        ...(named.title.trim() ? {} : { title }),
+        ...(cast.length ? { cast } : {}),
+      };
+      named = updateStory(story.id, patch) ?? { ...named, ...patch };
+      console.info(`[covers] named "${named.title}" with ${cast.length} character(s)`);
+    }
+
+    /*
+     * And only then the cover, and only if one is actually missing.
+     *
+     * This is the guard that matters financially: once naming became work in its own
+     * right, a story that had a cover but no cast would otherwise reach this line and
+     * buy a second cover it did not need.
+     */
+    if (!isCoverPending(named)) {
+      updateStory(story.id, { coverJob: undefined });
+      return { ok: true, message: `Named the cast of "${named.title || 'your story'}".` };
     }
 
     const raw = await generateCover({
-      story: titled,
+      story: named,
       apiKey,
       tier: job.tier ?? 0,
       signal: AbortSignal.timeout(120_000),
@@ -302,8 +342,8 @@ async function attemptCover(
     const coverId = newId();
     await putCover(coverId, await normalizeCover(raw));
     updateStory(story.id, { coverImageId: coverId, coverJob: undefined });
-    console.info(`[covers] generated cover for "${titled.title}"`);
-    return { ok: true, message: `Cover generated for "${titled.title || 'your story'}".` };
+    console.info(`[covers] generated cover for "${named.title}"`);
+    return { ok: true, message: `Cover generated for "${named.title || 'your story'}".` };
   } catch (err) {
     const attempts = job.attempts + 1;
     // A refusal is a problem with the prompt, so escalate to a plainer one straight

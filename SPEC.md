@@ -549,11 +549,11 @@ length do not.
   - The reading age is the strongest single lever here: it moves vocabulary, syntax and
     imagery together in a way that tightening any one rule does not. It was lowered from
     seven to five to make the language simpler across the board.
-  - `generateTitle` runs as its own call and so never sees this block; the audience's
+  - `nameStory` runs as its own call and so never sees this block; the audience's
     language level is restated for it via `TITLE_REGISTER`, so a plain-spoken book does
     not end up under a title only an adult can read.
 
-`generateTitle` is given the genre, the setting, the audience with its length profile,
+`nameStory` is given the genre, the setting, the audience with its length profile,
 and the audience's language level — *"Invent a title for an adventure book set in a
 nature world, written for children (a short book, 6 chapters). … Use only plain words a
 five-year-old knows. Nothing abstract and nothing figurative — a title a young child
@@ -566,6 +566,50 @@ could picture."*
 - The register must not refer to the story: the title is named *before* any prose
   exists, so an instruction like "name something concrete from the story" asks for
   something that is not there yet.
+**The cast is named before a word is written.** The same call that titles the book also
+returns five principal characters, each with a two-sentence bio, stored as `Story.cast`
+and injected into every chapter prompt as canon.
+
+- It rides in the naming call rather than taking one of its own: it has to be decided
+  before chapter one for the same reason the title does — a chapter that invents its own
+  names has already fixed them — and folding it in costs no extra round trip and no extra
+  wait before the book starts.
+- **Why it exists:** nothing in any prompt used to mention names, so the model fell back
+  on its own narrow prior and reached for the same handful every time. Three books from
+  three different prompts came back with *Mia*, *Maya* and *Mira*. The prompt now asks
+  for names that belong to the setting's world, and explicitly for distinctive ones the
+  model would be unlikely to reach for again — the first names that come to mind being
+  precisely the ones every other book already uses.
+- The bios are not decoration: a name with a temperament and a history behind it gets
+  written as a person rather than a role, and gives later chapters something to stay
+  consistent with.
+- **The reconciler heals a missing cast**, the same way it heals a missing cover, and
+  for the same reason: naming can fail, and a failure must not be permanent. `eligible`
+  now matches a story needing *either*. Two guards make that safe:
+  - **Only before a word is written** (`isCastPending` requires zero chapters). A
+    part-written book has its people established in prose, and a cast invented after the
+    fact would contradict names the reader has already read — worse than no cast, which
+    just leaves the model naming people as it goes. Verified: a three-chapter story with
+    its cast stripped makes **no** naming call, and still gets its cover.
+  - **A cover is bought only if one is missing.** Once naming became work in its own
+    right, a story with a cover but no cast would otherwise have reached the cover call
+    and paid for a second one. Verified: that case makes one naming call and **zero**
+    image calls.
+  - An existing title is kept and the model's discarded, so healing a cast can never
+    rename a book the reader already knows.
+  - Naming is deliberately independent of the title now. It used to run only for untitled
+    stories, which meant a titled but unwritten book — every story created before casts
+    existed — could never get a cast at all.
+- **The title is required, the cast is not.** A book with no title can be neither named
+  nor given a cover, so an unreadable title is a real failure. A missing or malformed cast
+  is not — the chapter prompt omits the block and the model names people itself, exactly
+  as before casts existed. `Story.cast` is optional, so no migration.
+- **Truncated JSON must not become a title.** A reply that is plain text is a usable
+  title (it is what this call used to return); a reply that is *broken JSON* is not.
+  Taken verbatim once, it put `{"title":"…","cast":[{"name":` on a book cover. The title
+  field is now picked out of the wreckage if it survived, and anything still looking like
+  JSON is refused so the reconciler retries.
+
 - Articles are agreed with `article()` rather than hardcoded to "a": two of nine genres
   and one of ten settings begin with a vowel, so around 30% of books were being
   described to the model as "a adventure book" or "a urban world".

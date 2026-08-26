@@ -203,6 +203,15 @@ export function buildSystemPrompt(story: Story, ctx: ChapterContext): string {
     );
   }
 
+  if (story.cast?.length) {
+    lines.push(
+      '',
+      'THE CAST — these people already exist; use these names exactly:',
+      ...story.cast.map((c) => `- ${c.name}: ${c.bio}`),
+      'Write them as described. You may introduce others where the story needs them, but sparingly, and named in keeping with the same world.',
+    );
+  }
+
   lines.push(
     '',
     'STYLE AND LANGUAGE:',
